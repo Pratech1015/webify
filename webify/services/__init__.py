@@ -10,7 +10,7 @@ import subprocess
 from pathlib import Path
 
 from ..config import SERVICES_DIR
-from ..core import WebifyError, clone_repo, detect_served_dir
+from ..core import WebifyError, build_repo, clone_repo, detect_served_dir
 from .. import daemon
 from ..daemon import (
     http_unit_name, tunnel_unit_name, unit_active, unit_pid, unit_status,
@@ -30,7 +30,7 @@ class BaseService:
     # ---- lifecycle (subclass hooks) ----
     def start(self, repo_url: str, port: int, **kw) -> dict:
         served = self.ensure_cloned(repo_url)
-        served = detect_served_dir(served)
+        served = build_repo(served)
         self.precheck(port, served)
         daemon.write_http_unit(self.name, served, port)
         daemon.daemon_reload()

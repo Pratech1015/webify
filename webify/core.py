@@ -1,7 +1,10 @@
 """Core helpers: git, ports, and path detection."""
 
+import json
+import shutil
 import socket
 import subprocess
+import sys
 from pathlib import Path
 
 from .config import DEFAULT_PORT, MAX_PORT, MIN_PORT
@@ -59,14 +62,77 @@ def find_free_port(preferred: int = DEFAULT_PORT) -> int:
 
 
 def detect_served_dir(repo_dir: Path) -> Path:
-    """Figure out which subdirectory to serve (supports classic static layouts)."""
+    """Figure out which subdirectory to serve (supports classic static layouts).
+
+    Checks build output dirs first (dist/, build/, etc.) before falling back
+    to the repo root. This ensures built assets are served over raw sources.
+    """
+    for candidate in ("dist", "build", "public", "static", "site", "out", "docs",
+                       ".next", ".output", "_build"):
+        if (repo_dir / candidate).exists():
+            return repo_dir / candidate
     for marker in ("index.html", "index.htm"):
         if (repo_dir / marker).exists():
             return repo_dir
-    for candidate in ("dist", "public", "build", "static", "site", "out", "docs"):
-        if (repo_dir / candidate).exists():
-            return repo_dir / candidate
     return repo_dir
+
+
+def build_repo(repo_dir: Path) -> Path:
+    """If the repo has a build system, install deps and build.
+
+    Returns the directory that should be served (e.g. dist/, build/, or repo root).
+    Raises WebifyError if the build fails.
+    """
+    if (repo_dir / "package.json").exists():
+        _npm_build(repo_dir)
+    return detect_served_dir(repo_dir)
+
+
+def _npm_build(repo_dir: Path):
+    """Run npm install + npm run build in the repo directory."""
+    npm = shutil.which("npm")
+    if not npm:
+        raise WebifyError(
+            "This repo contains package.json but 'npm' was not found on PATH. "
+            "Install Node.js first (e.g. 'pacman -S nodejs npm')."
+        )
+
+    print(f"  Installing npm dependencies...", flush=True)
+    proc = run(
+        [npm, "install", "--prefer-offline"],
+        cwd=repo_dir, check=False,
+    )
+    if proc.returncode != 0:
+        raise WebifyError(
+            f"npm install failed:\n{proc.stderr.strip()}"
+        )
+
+    # Check if a build script exists.
+    import json
+    try:
+        pkg = json.loads((repo_dir / "package.json").read_text())
+        scripts = pkg.get("scripts", {})
+    except (json.JSONDecodeError, OSError):
+        scripts = {}
+
+    if "build" not in scripts:
+        print("  No 'build' script in package.json — skipping build step.", flush=True)
+        return
+
+    print("  Running npm run build...", flush=True)
+    proc = run(
+        [npm, "run", "build"],
+        cwd=repo_dir, check=False,
+    )
+    if proc.returncode != 0:
+        # Show the error and the service status hint.
+        stderr = proc.stderr.strip()
+        stdout = proc.stdout.strip()
+        error_detail = stderr or stdout or "(no output)"
+        raise WebifyError(
+            f"npm run build failed (exit {proc.returncode}):\n{error_detail}\n\n"
+            f"Check the build output above and fix the errors, then retry."
+        )
 
 
 def is_systemd_user_available() -> bool:
