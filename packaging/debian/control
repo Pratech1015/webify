@@ -1,0 +1,17 @@
+Source: webify
+Section: utils
+Priority: optional
+Maintainer: Webify Contributors <webify@localhost>
+Build-Depends: debhelper-compat (= 13), dh-python, python3-all, python3-setuptools
+Standards-Version: 4.6.2
+Homepage: https://github.com/webify/webify
+Rules-Requires-Root: no
+
+Package: webify
+Architecture: all
+Depends: ${misc:Depends}, ${python3:Depends}, git
+Recommends: nginx
+Description: Self-hosted Netlify alternative for Linux
+ Webify deploys static sites directly from Git repositories and serves them
+ as systemd user services behind Python's built-in HTTP server. It supports
+ local, cloudflared (public tunnel), and nginx-managed hosting modes.

@@ -1,0 +1,12 @@
+#!/usr/bin/make -f
+# Debian build rules for Webify.
+
+%:
+	dh $@
+
+override_dh_auto_test:
+	# No test suite wired up yet; compileall as a sanity check.
+	python3 -m compileall -q webify
+
+override_dh_installchangelogs:
+	dh_installchangelogs -k

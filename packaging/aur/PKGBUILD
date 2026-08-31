@@ -1,0 +1,39 @@
+# Maintainer: Webify Contributors <webify@localhost>
+# Contributor: Webify Contributors
+
+pkgname=webify
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="Self-hosted Netlify alternative for Linux. Deploy static sites from Git repos as systemd user services."
+arch=('any')
+url="https://github.com/webify/webify"
+license=('MIT')
+depends=('python' 'git')
+optdepends=(
+    'nginx: for the nginx-managed hosting mode'
+    'cloudflared: for the public cloudflared tunnel mode'
+)
+makedepends=('python-build' 'python-installer')
+source=("$pkgname-$pkgver.tar.gz")
+sha256sums=('SKIP')
+# Do not build against system python packages (stdlib-only project).
+options=('!emptydirs')
+
+build() {
+    cd "$pkgname-$pkgver"
+    python -m build --wheel --no-isolation
+}
+
+check() {
+    cd "$pkgname-$pkgver"
+    python -m compileall -q webify
+}
+
+package() {
+    cd "$pkgname-$pkgver"
+    python -m installer --destdir="$pkgdir" \
+        dist/*.whl
+    # Install the systemd user template override dir is not needed; units are
+    # generated at runtime per-service under ~/.config/systemd/user/.
+    install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

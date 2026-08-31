@@ -6,6 +6,15 @@ build/
 dist/
 .venv/
 
+# Packaging build artifacts (source tarballs, native packages)
+packaging/dist/
+packaging/aur/src/
+packaging/aur/pkg/
+packaging/aur/*.tar.gz
+packaging/aur/*.pkg.tar.zst
+packaging/rhel/*.tar.gz
+*.tar.gz
+
 # Editors / OS
 .idea/
 .vscode/

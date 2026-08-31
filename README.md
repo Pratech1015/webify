@@ -30,21 +30,53 @@ If you pass no flags, Webify asks you interactively.
 
 ## Installation
 
+Webify ships native packages for the major Linux families plus a universal
+installer that auto-detects your distro.
+
+**One-line installer (auto-detects your distro):**
+
 ```bash
-pip install .            # system-wide
-# or
-pip install --user .     # per-user
+curl -fsSL https://github.com/webify/webify/raw/main/install.sh | bash
 ```
 
-Run `webify --version` to confirm.
+**Arch / EndeavourOS / Manjaro** — official AUR-style package (built & verified):
+
+```bash
+cd packaging/aur && make install      # builds a webify-*.pkg.tar.zst with makepkg
+# or via an AUR helper once published:  yay -S webify
+```
+
+**Debian / Ubuntu** — native `.deb`:
+
+```bash
+make package-deb                      # requires dpkg-buildpackage, debhelper
+sudo dpkg -i packaging/dist/webify_*.deb
+```
+
+**Fedora / RHEL / Rocky** — native `.rpm`:
+
+```bash
+make package-rpm                      # requires rpmbuild
+sudo dnf install packaging/rhel/webify-*.rpm
+```
+
+**Any other Linux** — generic venv install:
+
+```bash
+make install                          # python -m venv + pip install
+sudo ln -sf "$PWD/.venv/bin/webify" /usr/local/bin/webify
+```
+
+> Requires an active **systemd user session** (a normal desktop login) and
+> `python3` + `git`. Every Webify service runs as its own systemd user unit.
 
 ### Optional mode dependencies
 
-| Mode         | Binary needed    | Install (Arch)              |
-|--------------|------------------|-----------------------------|
-| `local`      | git              | (preinstalled)              |
-| `cloudflared`| `cloudflared`    | `pacman -S cloudflared`     |
-| `nginx`      | `nginx` + root   | `pacman -S nginx`           |
+| Mode         | Binary needed    | Arch                | Debian/Ubuntu   | Fedora        |
+|--------------|------------------|---------------------|-----------------|---------------|
+| `local`      | git              | (preinstalled)      | (preinstalled)  | (preinstalled)|
+| `cloudflared`| `cloudflared`    | `pacman -S cloudflared` | `apt install cloudflared` | `dnf install cloudflared` |
+| `nginx`      | `nginx` + root   | `pacman -S nginx`   | `apt install nginx` | `dnf install nginx` |
 
 ## Modes
 
@@ -114,6 +146,12 @@ webify/
 │  ├─ state.py               # persistent JSON state
 │  └─ services/
 │     └─ __init__.py         # Local / Cloudflared / Nginx services
+├─ packaging/
+│  ├─ aur/PKGBUILD           # Arch/EndeavourOS (AUR) package
+│  ├─ debian/                # Debian/Ubuntu .deb packaging
+│  └─ rhel/webify.spec       # Fedora/RHEL .rpm packaging
+├─ install.sh                # auto-detecting one-line installer
+├─ Makefile                  # platform/target/build helpers
 ├─ pyproject.toml
 ├─ README.md
 └─ LICENSE

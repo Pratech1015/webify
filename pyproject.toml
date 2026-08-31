@@ -17,9 +17,17 @@ classifiers = [
     "Operating System :: POSIX :: Linux",
     "Environment :: Console",
 ]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/webify/webify"
+Repository = "https://github.com/webify/webify"
+"Bug Tracker" = "https://github.com/webify/webify/issues"
 
 [project.scripts]
 webify = "webify.cli:main"
 
 [tool.setuptools]
 packages = ["webify", "webify.services"]
+
+
