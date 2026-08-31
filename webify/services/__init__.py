@@ -211,25 +211,57 @@ _TUNNEL_RE = re.compile(r"https://[a-z0-9-]+\.trycloudflare\.com")
 
 
 def _tunnel_url(name: str):
-    """Best-effort extraction of the public quick-tunnel URL for a specific service."""
+    """Best-effort extraction of the public tunnel URL for a specific service.
+
+    Supports both quick tunnels (random .trycloudflare.com) and authenticated
+    tunnels (user's own domain when logged into Cloudflare).
+    """
     unit = f"webify-{name}-tunnel.service"
-    # Query the specific tunnel unit's journal, not the entire user journal.
+    lines = []
+
+    # Query the specific tunnel unit's journal.
     try:
         proc = subprocess.run(
             ["journalctl", "--user", "-u", unit, "--no-pager", "-n", "800", "-o", "cat"],
             capture_output=True, text=True, timeout=8,
         )
-        for line in proc.stdout.splitlines():
-            m = _TUNNEL_RE.search(line)
-            if m:
-                return m.group(0)
+        lines = proc.stdout.splitlines()
     except (subprocess.TimeoutExpired, FileNotFoundError):
         pass
-    # Fallback: check our own capture inside the service dir.
-    svc_dir = SERVICES_DIR / name
-    capture = svc_dir / "logs" / "cloudflared.log"
+
+    # Also check the fallback capture file.
+    capture = SERVICES_DIR / name / "logs" / "cloudflared.log"
     if capture.exists():
-        m = _TUNNEL_RE.search(capture.read_text(errors="ignore"))
+        try:
+            lines.extend(capture.read_text(errors="ignore").splitlines())
+        except OSError:
+            pass
+
+    # Scan lines in reverse (newest first) for the actual tunnel URL.
+    for line in reversed(lines):
+        # Quick tunnel: "Your quick Tunnel has been created! Visit it at ...: https://..."
+        m = re.search(
+            r"(?:Visit it at|visit it at)[^:]*:\s*(https?://\S+)",
+            line, re.IGNORECASE,
+        )
+        if m:
+            url = m.group(1).rstrip(".,;)")
+            if "trycloudflare.com" in url or "." in url.split("//")[-1]:
+                return url
+
+    # Fallback: look for authenticated tunnel URL in connection registration lines.
+    # Pattern: "INF Connection registered ... url=https://your-domain.com"
+    for line in reversed(lines):
+        m = re.search(r"\burl=(https?://\S+)", line)
+        if m:
+            url = m.group(1).rstrip(".,;)")
+            if url != "http://localhost" and "trycloudflare.com" not in url:
+                return url
+
+    # Last resort: any trycloudflare.com URL that looks like a real tunnel.
+    for line in reversed(lines):
+        m = re.search(r"https://[a-z0-9-]+\.trycloudflare\.com\b", line)
         if m:
             return m.group(0)
+
     return None
