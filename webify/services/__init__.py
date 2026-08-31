@@ -96,7 +96,7 @@ class CloudflaredService(BaseService):
         return base
 
     def url(self) -> str:
-        return _tunnel_url(self.dir) or self._local_url()
+        return _tunnel_url(self.name) or self._local_url()
 
     def _local_url(self):
         return f"http://localhost:{_port(self)}"
@@ -210,13 +210,13 @@ def _test_and_reload(nginx: str):
 _TUNNEL_RE = re.compile(r"https://[a-z0-9-]+\.trycloudflare\.com")
 
 
-def _tunnel_url(svc_dir: Path):
-    """Best-effort extraction of the public quick-tunnel URL."""
-    # cloudflared prints to its stdout; systemd captures it in the journal.
-    # We can't know the unit name here, so scan user journal for any trycloudflare.
+def _tunnel_url(name: str):
+    """Best-effort extraction of the public quick-tunnel URL for a specific service."""
+    unit = f"webify-{name}-tunnel.service"
+    # Query the specific tunnel unit's journal, not the entire user journal.
     try:
         proc = subprocess.run(
-            ["journalctl", "--user", "--no-pager", "-n", "800", "-o", "cat"],
+            ["journalctl", "--user", "-u", unit, "--no-pager", "-n", "800", "-o", "cat"],
             capture_output=True, text=True, timeout=8,
         )
         for line in proc.stdout.splitlines():
@@ -226,6 +226,7 @@ def _tunnel_url(svc_dir: Path):
     except (subprocess.TimeoutExpired, FileNotFoundError):
         pass
     # Fallback: check our own capture inside the service dir.
+    svc_dir = SERVICES_DIR / name
     capture = svc_dir / "logs" / "cloudflared.log"
     if capture.exists():
         m = _TUNNEL_RE.search(capture.read_text(errors="ignore"))
