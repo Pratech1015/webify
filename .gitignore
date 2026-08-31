@@ -1,0 +1,15 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
+
+# Local runtime data (Webify services are stored per-user, not in-repo)
+*.pid

@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "webify"
+version = "0.1.0"
+description = "Webify — a self-hosted Netlify alternative for Linux. Deploy static sites from Git repos with one command."
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+authors = [{ name = "Webify Contributors" }]
+keywords = ["deploy", "static-site", "self-hosted", "netlify", "git", "hosting"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Environment :: Console",
+]
+
+[project.scripts]
+webify = "webify.cli:main"
+
+[tool.setuptools]
+packages = ["webify", "webify.services"]
