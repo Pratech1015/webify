@@ -75,6 +75,31 @@ WantedBy=default.target
     _write_unit(path, content)
 
 
+def write_custom_unit(name: str, command: str, workdir: Path = None, port: int = None) -> None:
+    """Write a systemd user unit that runs an arbitrary command (dev server, binary, etc.)."""
+    desc = f"Webify service {name}"
+    if port:
+        desc += f" (port {port})"
+    workdir_line = f"WorkingDirectory={workdir}" if workdir else ""
+    content = f"""# Managed by Webify — do not edit manually.
+[Unit]
+Description={desc}
+After=network.target
+
+[Service]
+Type=simple
+{workdir_line}
+ExecStart={command}
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target
+"""
+    path = _unit_dir() / http_unit_name(name)
+    _write_unit(path, content)
+
+
 def write_tunnel_unit(name: str, port: int) -> None:
     """Write a cloudflared quick-tunnel unit bound to the service's http port."""
     cloudflared = _which("cloudflared")

@@ -30,17 +30,35 @@ class BaseService:
     # ---- lifecycle (subclass hooks) ----
     def start(self, repo_url: str, port: int, **kw) -> dict:
         served = self.ensure_cloned(repo_url)
-        served = build_repo(served)
+        result = build_repo(served)
         self.precheck(port, served)
-        daemon.write_http_unit(self.name, served, port)
-        daemon.daemon_reload()
-        daemon.start_unit(http_unit_name(self.name))
-        self.extra_after_start(port, served)
-        info = {
-            "mode": self.mode, "repo": repo_url, "port": port,
-            "dir": str(self.dir), "served": str(served),
-            "unit": http_unit_name(self.name),
-        }
+
+        if result["mode"] == "static":
+            # Static site — use http.server on the served directory.
+            served = result["served"]
+            daemon.write_http_unit(self.name, served, port)
+            daemon.daemon_reload()
+            daemon.start_unit(http_unit_name(self.name))
+            self.extra_after_start(port, served)
+            info = {
+                "mode": self.mode, "repo": repo_url, "port": port,
+                "dir": str(self.dir), "served": str(served),
+                "unit": http_unit_name(self.name),
+            }
+        else:
+            # Dev server / binary — run the command directly.
+            command = result["command"]
+            detected_port = result.get("port") or port
+            daemon.write_custom_unit(self.name, command, workdir=served, port=detected_port)
+            daemon.daemon_reload()
+            daemon.start_unit(http_unit_name(self.name))
+            info = {
+                "mode": self.mode, "repo": repo_url, "port": detected_port,
+                "dir": str(self.dir), "served": str(served),
+                "unit": http_unit_name(self.name),
+                "command": command,
+            }
+
         return info
 
     def start_no_build(self, repo_url: str, port: int) -> dict:
