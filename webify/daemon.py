@@ -81,6 +81,7 @@ def write_custom_unit(name: str, command: str, workdir: Path = None, port: int =
     if port:
         desc += f" (port {port})"
     workdir_line = f"WorkingDirectory={workdir}" if workdir else ""
+    env_line = f"Environment=PORT={port}" if port else ""
     content = f"""# Managed by Webify — do not edit manually.
 [Unit]
 Description={desc}
@@ -89,6 +90,7 @@ After=network.target
 [Service]
 Type=simple
 {workdir_line}
+{env_line}
 ExecStart={command}
 Restart=on-failure
 RestartSec=2

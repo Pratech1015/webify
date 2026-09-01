@@ -77,26 +77,29 @@ def detect_served_dir(repo_dir: Path) -> Path:
     return repo_dir
 
 
-def build_repo(repo_dir: Path) -> dict:
+def build_repo(repo_dir: Path, port: int = 7070) -> dict:
     """Detect project type, install deps, build if needed.
+
+    All services use the 7070+ port system. The port is passed via PORT env var
+    to dev/start servers so they bind to the correct port.
 
     Returns a dict with:
       - "mode": "static" (serve a dir) or "server" (run a command)
       - "served": the directory to serve (for static)
       - "command": the command to run (for server)
-      - "port": detected port (for server, or None for static)
+      - "port": the port to use
     Raises WebifyError if the build fails.
     """
     project = detect_project_type(repo_dir)
 
     if project["type"] == "node":
-        return _handle_node(repo_dir, project)
+        return _handle_node(repo_dir, project, port)
     elif project["type"] == "make":
         return _handle_make(repo_dir)
     elif project["type"] == "cargo":
-        return _handle_cargo(repo_dir)
+        return _handle_cargo(repo_dir, port)
     elif project["type"] == "go":
-        return _handle_go(repo_dir)
+        return _handle_go(repo_dir, port)
 
     # No recognized build system — just serve the repo.
     return {"mode": "static", "served": detect_served_dir(repo_dir)}
@@ -147,7 +150,7 @@ def _npm_install(repo_dir: Path):
     return npm
 
 
-def _handle_node(repo_dir: Path, project: dict) -> dict:
+def _handle_node(repo_dir: Path, project: dict, port: int = 7070) -> dict:
     """Handle Node.js projects: build, dev, or start."""
     npm = _npm_install(repo_dir)
     action = project["action"]
@@ -162,26 +165,28 @@ def _handle_node(repo_dir: Path, project: dict) -> dict:
                 f"npm run build failed (exit {proc.returncode}):\n{err}\n\n"
                 f"Check the build output above and fix the errors, then retry."
             )
-        return {"mode": "static", "served": detect_served_dir(repo_dir)}
+        return {"mode": "static", "served": detect_served_dir(repo_dir), "port": port}
 
     if action in ("dev", "start"):
-        # Dev server — run directly, detect port from output.
+        # Dev server — pass PORT env var so it binds to our port.
         cmd = f"{npm} run {action}"
-        print(f"  Starting {cmd}...", flush=True)
-        port = _detect_server_port(repo_dir, [npm, "run", action])
-        return {"mode": "server", "command": cmd, "port": port}
+        print(f"  Starting {cmd} on port {port}...", flush=True)
+        detected = _detect_server_port(repo_dir, [npm, "run", action], port=port)
+        return {"mode": "server", "command": cmd, "port": detected}
 
     # No useful scripts — just serve the repo.
-    return {"mode": "static", "served": detect_served_dir(repo_dir)}
+    return {"mode": "static", "served": detect_served_dir(repo_dir), "port": port}
 
 
-def _detect_server_port(repo_dir: Path, cmd: list, timeout: float = 15.0) -> int:
-    """Run a command, capture output, and detect the port it listens on."""
+def _detect_server_port(repo_dir: Path, cmd: list, port: int = 7070, timeout: float = 15.0) -> int:
+    """Run a command with PORT env var, detect the actual port it listens on."""
     import re
     import time
 
+    env = {**subprocess.os.environ, "PORT": str(port)}
+
     proc = subprocess.Popen(
-        cmd, cwd=repo_dir,
+        cmd, cwd=repo_dir, env=env,
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
         text=True,
     )
@@ -246,7 +251,7 @@ def _handle_make(repo_dir: Path) -> dict:
     return {"mode": "static", "served": served}
 
 
-def _handle_cargo(repo_dir: Path) -> dict:
+def _handle_cargo(repo_dir: Path, port: int = 7070) -> dict:
     cargo = shutil.which("cargo")
     if not cargo:
         raise WebifyError("'cargo' not found on PATH.")
@@ -262,10 +267,10 @@ def _handle_cargo(repo_dir: Path) -> dict:
     if not bins:
         raise WebifyError("cargo build succeeded but no binary found in target/release/.")
     binary = bins[0]
-    return {"mode": "server", "command": binary, "port": None}
+    return {"mode": "server", "command": binary, "port": port}
 
 
-def _handle_go(repo_dir: Path) -> dict:
+def _handle_go(repo_dir: Path, port: int = 7070) -> dict:
     go = shutil.which("go")
     if not go:
         raise WebifyError("'go' not found on PATH.")
@@ -277,7 +282,7 @@ def _handle_go(repo_dir: Path) -> dict:
     binary = repo_dir / "webify-app"
     if not binary.exists():
         raise WebifyError("go build succeeded but binary not found.")
-    return {"mode": "server", "command": str(binary), "port": None}
+    return {"mode": "server", "command": str(binary), "port": port}
 
 
 def is_systemd_user_available() -> bool:

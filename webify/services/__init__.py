@@ -30,7 +30,7 @@ class BaseService:
     # ---- lifecycle (subclass hooks) ----
     def start(self, repo_url: str, port: int, **kw) -> dict:
         served = self.ensure_cloned(repo_url)
-        result = build_repo(served)
+        result = build_repo(served, port=port)
         self.precheck(port, served)
 
         if result["mode"] == "static":
