@@ -223,6 +223,12 @@ def run_web(host: str = "0.0.0.0", port: int = None):
     """Start the dashboard in foreground using the waitress production server."""
     ensure_dirs()
     p = port or _get_port()
+    try:
+        from waitress import serve
+    except ImportError:
+        raise WebifyError(
+            "The dashboard needs 'waitress' and 'flask'. "
+            "Install them with: pip install webify[web]  (or: sudo apt install python3-flask python3-waitress)"
+        )
     print(f"Webify dashboard running at http://localhost:{p}")
-    from waitress import serve
     serve(app, host=host, port=p, threads=4)
