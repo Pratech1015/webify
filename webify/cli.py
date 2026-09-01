@@ -127,8 +127,17 @@ def cmd_create(args):
         info = svc.start(repo, port)
     except WebifyError as exc:
         _e(str(exc))
-        _cleanup_partial(svc)
-        sys.exit(1)
+        _info("Build failed — creating service in disabled state.")
+        try:
+            info = svc.start_no_build(repo, port)
+            state.save_service(name, info)
+            _ok(f"Service {name} registered (disabled) on port {info.get('port')}")
+            _info(f"{DIM}Fix the build error above, then run:{RESET}")
+            _info(f"  webify enable {name} && webify start {name}")
+        except WebifyError as inner:
+            _e(f"Could not register service: {inner}")
+            _cleanup_partial(svc)
+        return
 
     state.save_service(name, info)
 

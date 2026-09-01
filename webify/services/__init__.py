@@ -43,6 +43,19 @@ class BaseService:
         }
         return info
 
+    def start_no_build(self, repo_url: str, port: int) -> dict:
+        """Create the service unit but don't start it (used after build failure)."""
+        served = self.ensure_cloned(repo_url)
+        served = detect_served_dir(served)
+        daemon.write_http_unit(self.name, served, port)
+        daemon.daemon_reload()
+        info = {
+            "mode": self.mode, "repo": repo_url, "port": port,
+            "dir": str(self.dir), "served": str(served),
+            "unit": http_unit_name(self.name),
+        }
+        return info
+
     def precheck(self, port: int, served: Path):
         """Validate prerequisites before launching anything. Override per mode."""
 
