@@ -24,10 +24,12 @@ def run(cmd, cwd=None, check=True, capture=True):
 def clone_repo(repo_url: str, dest: Path) -> None:
     """Clone a git repo into dest (shallow), or pull if already present."""
     if dest.exists() and (dest / ".git").exists():
+        print(f"  Pulling latest changes...", flush=True)
         run(["git", "pull", "--ff-only"], cwd=dest)
         return
     if dest.exists():
         raise WebifyError(f"Destination already exists and is not a git repo: {dest}")
+    print(f"  Cloning {repo_url} ...", flush=True)
     proc = run(["git", "clone", "--depth", "1", repo_url, str(dest)], capture=True)
     if proc.returncode != 0:
         raise WebifyError(

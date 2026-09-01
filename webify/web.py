@@ -45,12 +45,43 @@ def _service_info(name: str) -> dict:
         "repo": info.get("repo"),
         "url": url,
         "status": status,
+        "running": "running" in status,
+        "deploy": deploy_status(name),
+        "deploying": deploy_active(name),
         "pid": pid,
         "served": info.get("served"),
         "command": info.get("command"),
         "unit": info.get("unit"),
         "dir": info.get("dir"),
     }
+
+
+def deploy_active(name: str) -> bool:
+    """True if a deploy is currently running for this site."""
+    return daemon.unit_active(daemon.deploy_unit_name(name))
+
+
+def deploy_status(name: str) -> str:
+    """Describe the deploy state: deploying | published | failed | not-deployed."""
+    unit = daemon.deploy_unit_name(name)
+    if daemon.unit_active(unit):
+        return "deploying"
+    if "running" in build_service(name, state.get_service(name)["mode"]).status():
+        return "published"
+    # Deploy unit exists but site isn't running -> last deploy failed or never ran.
+    from pathlib import Path
+    if (Path.home() / ".config" / "systemd" / "user" / f"{unit}").exists():
+        return "failed"
+    return "not-deployed"
+
+
+def _trigger_deploy(name: str) -> None:
+    """Write the deploy unit and start it (non-blocking)."""
+    daemon.write_deploy_unit(name)
+    daemon.daemon_reload()
+    # Restart if already deployed so re-triggering redeploys cleanly.
+    daemon.stop_unit(daemon.deploy_unit_name(name), disable=False)
+    daemon.start_unit(daemon.deploy_unit_name(name), enable=False)
 
 
 @app.route("/")
@@ -85,17 +116,19 @@ def new_site():
         svc.dir.mkdir(parents=True, exist_ok=True)
         (svc.dir / "logs").mkdir(parents=True, exist_ok=True)
 
+        # Register state first, then kick off a background deploy service.
+        state.save_service(name, {
+            "name": name,
+            "mode": mode,
+            "repo": repo,
+            "port": port,
+            "dir": str(svc.dir),
+        })
         try:
-            info = svc.start(repo, port)
+            _trigger_deploy(name)
         except WebifyError as exc:
-            try:
-                info = svc.start_no_build(repo, port)
-                state.save_service(name, info)
-                return redirect(url_for("site_detail", name=name))
-            except WebifyError:
-                return render_template("new.html", error=str(exc))
+            return render_template("new.html", error=str(exc))
 
-        state.save_service(name, info)
         return redirect(url_for("site_detail", name=name))
 
     return render_template("new.html")
@@ -114,14 +147,40 @@ def site_logs(name):
     info = state.get_service(name)
     if not info:
         abort(404)
+    lines = int(request.args.get("lines", 200))
+
+    # Deploy logs (cloning/building) first — that's what the Deploys tab shows.
+    deploy_log = daemon.journal(daemon.deploy_unit_name(name), lines)
+
+    # Runtime logs from the site's serve unit.
     unit = info.get("unit") or daemon.http_unit_name(name)
-    lines = int(request.args.get("lines", 100))
-    log_text = daemon.journal(unit, lines)
-    if info.get("mode") == "cloudflared":
-        tunnel = daemon.journal(daemon.tunnel_unit_name(name), 50)
-        if tunnel.strip():
-            log_text += "\n--- tunnel ---\n" + tunnel
-    return jsonify({"logs": log_text})
+    run_log = daemon.journal(unit, lines)
+
+    parts = []
+    if deploy_log.strip():
+        parts.append("── Deploy ──\n" + deploy_log)
+    if run_log.strip():
+        parts.append("── Runtime ──\n" + run_log)
+    if not parts:
+        parts.append("No deploy has been run yet for this site.")
+    log_text = "\n\n".join(parts)
+    return jsonify({
+        "logs": log_text,
+        "deploying": deploy_active(name),
+        "failed": deploy_active(name) is False and deploy_status(name) == "failed",
+    })
+
+
+@app.route("/site/<name>/deploy", methods=["POST"])
+def site_deploy(name):
+    info = state.get_service(name)
+    if not info:
+        return jsonify({"error": "not found"}), 404
+    try:
+        _trigger_deploy(name)
+    except WebifyError as exc:
+        return jsonify({"error": str(exc)}), 500
+    return jsonify({"status": "deploying"})
 
 
 @app.route("/site/<name>/start", methods=["POST"])
@@ -129,14 +188,11 @@ def site_start(name):
     info = state.get_service(name)
     if not info:
         return jsonify({"error": "not found"}), 404
-    svc = build_service(name, info.get("mode", "local"))
-    if "running" in svc.status():
-        return jsonify({"status": "already running"})
     try:
-        svc.start(info.get("repo"), info.get("port"))
+        _trigger_deploy(name)
     except WebifyError as exc:
         return jsonify({"error": str(exc)}), 500
-    return jsonify({"status": "started"})
+    return jsonify({"status": "deploying"})
 
 
 @app.route("/site/<name>/stop", methods=["POST"])
@@ -154,10 +210,11 @@ def site_restart(name):
     info = state.get_service(name)
     if not info:
         return jsonify({"error": "not found"}), 404
-    daemon.restart_unit(info.get("unit") or daemon.http_unit_name(name))
-    if info.get("mode") == "cloudflared":
-        daemon.restart_unit(daemon.tunnel_unit_name(name))
-    return jsonify({"status": "restarted"})
+    try:
+        _trigger_deploy(name)
+    except WebifyError as exc:
+        return jsonify({"error": str(exc)}), 500
+    return jsonify({"status": "deploying"})
 
 
 @app.route("/site/<name>/delete", methods=["POST"])
@@ -168,6 +225,7 @@ def site_delete(name):
     svc = build_service(name, info.get("mode", "local"))
     daemon.stop_unit(daemon.http_unit_name(name), disable=True)
     daemon.stop_unit(daemon.tunnel_unit_name(name), disable=True)
+    daemon.stop_unit(daemon.deploy_unit_name(name), disable=True)
     daemon.remove_units(name)
     daemon.daemon_reload()
     import shutil

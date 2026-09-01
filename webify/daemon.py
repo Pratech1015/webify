@@ -47,6 +47,34 @@ def tunnel_unit_name(name: str) -> str:
     return f"webify-{name}-tunnel.service"
 
 
+def deploy_unit_name(name: str) -> str:
+    return f"webify-{name}-deploy.service"
+
+
+def write_deploy_unit(name: str) -> None:
+    """Write the systemd user unit that clones/builds/starts a site in the background.
+
+    Deploys run as their own service so the dashboard & CLI never block on
+    cloning/building, the page can be reloaded freely, and the build output is
+    captured in the deploy unit's journal (shown in the Deploys tab).
+    """
+    python = _python_bin()
+    content = f"""# Managed by Webify — do not edit manually.
+[Unit]
+Description=Webify deploy {name}
+After=network.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=no
+ExecStart={python} -m webify.deploy_service {name}
+
+[Install]
+WantedBy=default.target
+"""
+    _write_unit(_unit_dir() / deploy_unit_name(name), content)
+
+
 def write_web_unit(port: int) -> None:
     """Write the systemd user unit for the Webify web dashboard."""
     python = _python_bin()
@@ -149,7 +177,7 @@ WantedBy=default.target
 
 
 def remove_units(name: str) -> None:
-    for unit in (http_unit_name(name), tunnel_unit_name(name)):
+    for unit in (http_unit_name(name), tunnel_unit_name(name), deploy_unit_name(name)):
         p = _unit_dir() / unit
         if p.exists():
             p.unlink()
@@ -157,7 +185,7 @@ def remove_units(name: str) -> None:
 
 def rename_units(old_name: str, new_name: str) -> None:
     """Rename systemd unit files from old_name to new_name."""
-    for suffix in ("", "-tunnel"):
+    for suffix in ("", "-tunnel", "-deploy"):
         old_path = _unit_dir() / f"webify-{old_name}{suffix}.service"
         new_path = _unit_dir() / f"webify-{new_name}{suffix}.service"
         if old_path.exists():

@@ -4,11 +4,9 @@
 <div class="topbar">
   <h1>{{ site.name }}</h1>
   <div class="actions">
+    <button class="btn btn-primary" onclick="api('/site/{{ site.name }}/deploy')">Deploy</button>
     {% if 'running' in site.status %}
       <button class="btn btn-secondary" onclick="api('/site/{{ site.name }}/stop')">Stop</button>
-      <button class="btn btn-secondary" onclick="api('/site/{{ site.name }}/restart')">Restart</button>
-    {% else %}
-      <button class="btn btn-primary" onclick="api('/site/{{ site.name }}/start')">Start</button>
     {% endif %}
   </div>
 </div>
@@ -16,8 +14,12 @@
 <div style="display:flex;gap:20px;margin-bottom:24px;flex-wrap:wrap">
   <div style="flex:1;min-width:200px">
     <div style="font-size:12px;color:#556677;margin-bottom:4px">Status</div>
-    {% if 'running' in site.status %}
+    {% if site.deploying %}
+      <span class="status status-running"><span class="status-dot"></span>Deploying…</span>
+    {% elif 'running' in site.status %}
       <span class="status status-running"><span class="status-dot"></span>{{ site.status }}</span>
+    {% elif site.deploy == 'failed' %}
+      <span class="status status-stopped"><span class="status-dot"></span>Deploy failed — fix &amp; redeploy</span>
     {% else %}
       <span class="status status-stopped"><span class="status-dot"></span>{{ site.status }}</span>
     {% endif %}
@@ -44,7 +46,7 @@
 <div id="tab-deploys">
   <div class="card">
     <div class="card-header">
-      <h3>Deploy log</h3>
+      <h3>Deploy log <span id="deploy-badge" style="font-weight:400;font-size:12px"></span></h3>
       <button class="btn btn-secondary btn-sm" onclick="loadLogs()">Refresh</button>
     </div>
     <div class="card-body">
@@ -117,9 +119,22 @@ function loadLogs() {
       const box = document.getElementById('logbox');
       box.textContent = d.logs || 'No logs yet.';
       box.scrollTop = box.scrollHeight;
+      const badge = document.getElementById('deploy-badge');
+      if (d.deploying) badge.textContent = '• deploying…';
+      else if (d.failed) badge.textContent = '• failed — fix & redeploy';
+      else badge.textContent = '• published';
     })
     .catch(() => { document.getElementById('logbox').textContent = 'Failed to load logs.'; });
 }
+
+// Auto-refresh the deploy log while a deploy is running.
+var pollTimer = setInterval(function () {
+  fetch('/site/{{ site.name }}/logs?lines=50')
+    .then(r => r.json())
+    .then(d => {
+      if (d.deploying) loadLogs();
+    });
+}, 3000);
 
 function api(url, method='POST') {
   fetch(url, {method, headers:{'Content-Type':'application/json'}})

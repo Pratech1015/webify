@@ -101,15 +101,15 @@ Served at `http://webify-<name>.localhost`.
 ## Commands
 
 ```bash
-webify create <name> [--repo URL] [--port N] [--mode MODE]  # create + start
+webify create <name> [--repo URL] [--port N] [--mode MODE]  # register + trigger a deploy
 webify list                                                  # show all services
 webify status <name>                                         # status, PID, URL, unit
 webify url <name>                                            # print just the URL
-webify start <name> / stop <name>                            # start / stop a service
-webify kill <name>                                           # stop + disable the units
-webify restart <name>                                        # restart the units
+webify start <name>                                          # trigger a (re)deploy in background
+webify stop <name> / kill <name>                             # stop / stop+disable the units
+webify restart <name>                                        # trigger a redeploy
 webify enable <name> / disable <name>                        # auto-start on login
-webify logs <name> [--lines N]                               # tail service (journal) logs
+webify logs <name> [--lines N]                               # show deploy + runtime logs
 webify remove <name>                                         # stop, disable, and delete
 webify rename <old> <new>                                    # rename a service
 webify web                                                   # start/stop the dashboard (toggle)
@@ -119,6 +119,15 @@ webify web --port 9000                                       # change port, then
 webify web --serve [--port N]                                # run in foreground (production)
 webify --version
 ```
+
+> **Deploys run as services.** Cloning, dependency install, and building happen
+> inside a dedicated systemd unit `webify-<name>-deploy.service`, *not* inside
+> the web request or CLI process. So you can reload the dashboard or re-run
+> `webify start` as many times as you like — it never blocks or half-starts.
+> The build output is captured in that unit's journal and shown in the
+> dashboard **Deploys** tab (auto-refreshing) or via `webify logs <name>`.
+> A failed deploy leaves the site registered so you can simply fix the issue
+> and click **Deploy** again.
 
 ### Web dashboard
 

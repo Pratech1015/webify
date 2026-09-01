@@ -123,30 +123,34 @@ def cmd_create(args):
     svc.dir.mkdir(parents=True, exist_ok=True)
     (svc.dir / "logs").mkdir(parents=True, exist_ok=True)
 
-    _info(f"Cloning {repo} …")
+    # Register state first, then run the deploy as a background systemd service.
+    state.save_service(name, {
+        "mode": mode,
+        "repo": repo,
+        "port": port,
+        "dir": str(svc.dir),
+    })
+
+    _info(f"Deploying {repo} → {name} (port {port}) in the background …")
     try:
-        info = svc.start(repo, port)
+        _deploy_svc(name)
     except WebifyError as exc:
         _e(str(exc))
-        _info("Build failed — creating service in disabled state.")
-        try:
-            info = svc.start_no_build(repo, port)
-            state.save_service(name, info)
-            _ok(f"Service {name} registered (disabled) on port {info.get('port')}")
-            _info(f"{DIM}Fix the build error above, then run:{RESET}")
-            _info(f"  webify enable {name} && webify start {name}")
-        except WebifyError as inner:
-            _e(f"Could not register service: {inner}")
-            _cleanup_partial(svc)
-        return
+        _cleanup_partial(svc)
+        state.remove_service(name)
+        sys.exit(1)
 
-    state.save_service(name, info)
+    _ok(f"Service {name} registered on port {port}. Deploy running in background.")
+    _info("Watch progress with: webify logs " + name)
+    _info("Or check status with:    webify status " + name)
 
-    _ok(f"Service {name} started on PID {pid_of(info)} at port {info.get('port')}")
-    url = info.get("url") or svc.url()
-    _info(f"{DIM}URL:{RESET} {url}")
-    _info(f"{DIM}Serving:{RESET} {info.get('served')}")
-    _info(f"{DIM}Mode:{RESET} {mode}")
+
+def _deploy_svc(name):
+    """Write the deploy unit and start it (non-blocking)."""
+    daemon.write_deploy_unit(name)
+    daemon.daemon_reload()
+    daemon.stop_unit(daemon.deploy_unit_name(name), disable=False)
+    daemon.start_unit(daemon.deploy_unit_name(name), enable=False)
 
 
 def cmd_list(_args):
@@ -222,28 +226,26 @@ def cmd_start(args):
         svc, info = _require_service(args.name)
     except WebifyError as exc:
         _e(str(exc)); sys.exit(1)
-    if "running" in svc.status():
-        _info(f"Service {args.name} is already running.")
-        return
-    port = info.get("port") or find_free_port(DEFAULT_PORT)
+    _info(f"Deploying {args.name} in the background …")
     try:
-        info = svc.start(info.get("repo"), port)
-        state.save_service(args.name, info)
+        _deploy_svc(args.name)
     except WebifyError as exc:
         _e(str(exc)); sys.exit(1)
-    _ok(f"Service {args.name} restarted on PID {pid_of(info)} at port {info.get('port')}")
+    _ok(f"Deploy started for {args.name}. Watch with: webify logs {args.name}")
 
 
 def cmd_restart(args):
     _validate_name(args.name)
     try:
-        svc, info = _require_service(args.name)
+        _, info = _require_service(args.name)
     except WebifyError as exc:
         _e(str(exc)); sys.exit(1)
-    daemon.restart_unit(info.get("unit") or daemon.http_unit_name(args.name))
-    if info.get("mode") == "cloudflared":
-        daemon.restart_unit(daemon.tunnel_unit_name(args.name))
-    _ok(f"Service {args.name} restarted.")
+    _info(f"Redeploying {args.name} in the background …")
+    try:
+        _deploy_svc(args.name)
+    except WebifyError as exc:
+        _e(str(exc)); sys.exit(1)
+    _ok(f"Redeploy started for {args.name}. Watch with: webify logs {args.name}")
 
 
 def cmd_enable(args):
@@ -298,15 +300,28 @@ def cmd_logs(args):
     except WebifyError as exc:
         _e(str(exc)); sys.exit(1)
     unit = info.get("unit") or daemon.http_unit_name(args.name)
+    deploy = daemon.journal(daemon.deploy_unit_name(args.name), args.lines)
     out = daemon.journal(unit, args.lines)
+    printed = False
+    if deploy.strip():
+        print(f"{BOLD}── Deploy ──{RESET}")
+        print(deploy)
+        printed = True
     if out.strip():
+        if printed:
+            print()
+        print(f"{BOLD}── Runtime ──{RESET}")
         print(out)
+        printed = True
     if info.get("mode") == "cloudflared":
         tunnel = daemon.journal(daemon.tunnel_unit_name(args.name), args.lines)
         if tunnel.strip():
-            print(f"{DIM}--- tunnel ---{RESET}")
+            if printed:
+                print()
+            print(f"{BOLD}── Tunnel ──{RESET}")
             print(tunnel)
-    if not out.strip():
+            printed = True
+    if not printed:
         print(f"{DIM}No logs yet for {args.name}.{RESET}")
 
 
@@ -318,6 +333,7 @@ def cmd_remove(args):
         _e(str(exc)); sys.exit(1)
     daemon.stop_unit(daemon.http_unit_name(args.name), disable=True)
     daemon.stop_unit(daemon.tunnel_unit_name(args.name), disable=True)
+    daemon.stop_unit(daemon.deploy_unit_name(args.name), disable=True)
     daemon.remove_units(args.name)
     daemon.daemon_reload()
     import shutil

@@ -25,19 +25,19 @@
       <td><a href="/site/{{ s.name }}" style="font-weight:500;color:#fff">{{ s.name }}</a></td>
       <td style="font-family:monospace;font-size:13px">{{ s.url or '—' }}</td>
       <td>
-        {% if 'running' in s.status %}
+        {% if s.deploying %}
+          <span class="status status-running"><span class="status-dot"></span>Deploying…</span>
+        {% elif 'running' in s.status %}
           <span class="status status-running"><span class="status-dot"></span>Published</span>
+        {% elif s.deploy == 'failed' %}
+          <span class="status status-stopped"><span class="status-dot"></span>Failed</span>
         {% else %}
-          <span class="status status-stopped"><span class="status-dot"></span>Stopped</span>
+          <span class="status status-stopped"><span class="status-dot"></span>Not deployed</span>
         {% endif %}
       </td>
       <td style="color:#556677">{{ s.mode }}</td>
       <td>
-        {% if 'running' in s.status %}
-          <button class="btn btn-secondary btn-sm" onclick="api('/site/{{ s.name }}/stop')">Stop</button>
-        {% else %}
-          <button class="btn btn-secondary btn-sm" onclick="api('/site/{{ s.name }}/start')">Start</button>
-        {% endif %}
+        <button class="btn btn-secondary btn-sm" onclick="api('/site/{{ s.name }}/deploy')">Deploy</button>
       </td>
     </tr>
   {% endfor %}
