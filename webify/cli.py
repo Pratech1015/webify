@@ -146,10 +146,10 @@ def cmd_create(args):
 
 
 def _deploy_svc(name):
-    """Write the deploy unit and start it (non-blocking)."""
+    """Queue a deploy: write the unit and hand 'start' to systemd, non-blocking."""
     daemon.write_deploy_unit(name)
     daemon.daemon_reload()
-    daemon.stop_unit(daemon.deploy_unit_name(name), disable=False)
+    daemon.reset_failed_unit(daemon.deploy_unit_name(name))
     daemon.start_unit(daemon.deploy_unit_name(name), enable=False)
 
 
@@ -385,13 +385,11 @@ def cmd_rename(args):
     daemon.daemon_reload()
 
     if was_running:
-        _info(f"Restarting {args.new} …")
+        _info(f"Redeploying {args.new} …")
         try:
-            svc = build_service(args.new, info.get("mode", "local"))
-            svc.start(info.get("repo"), info.get("port"))
-            state.save_service(args.new, info)
+            _deploy_svc(args.new)
         except WebifyError as exc:
-            _e(f"Renamed but could not restart: {exc}")
+            _e(f"Renamed but could not trigger deploy: {exc}")
             state.save_service(args.new, info)
             return
 

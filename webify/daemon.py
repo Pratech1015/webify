@@ -217,6 +217,11 @@ def restart_unit(unit: str):
     _systemctl(["restart", unit])
 
 
+def reset_failed_unit(unit: str) -> None:
+    """Clear a unit's failed state so 'start' can be issued again. Non-blocking."""
+    _systemctl(["reset-failed", unit], check=False)
+
+
 def unit_active(unit: str) -> bool:
     proc = _systemctl(["is-active", unit], check=False)
     return proc.returncode == 0

@@ -76,11 +76,18 @@ def deploy_status(name: str) -> str:
 
 
 def _trigger_deploy(name: str) -> None:
-    """Write the deploy unit and start it (non-blocking)."""
+    """Queues a deploy by handing the command to systemd and returning.
+
+    This is strictly fire-and-forget: no blocking calls that wait on an
+    in-flight build, so the page reloads freely while a deploy runs.
+      1. write the deploy unit (cheap file write)
+      2. reload once so systemd sees the (possibly new) unit
+      3. clear any prior failed state so 'start' will take effect
+      4. start the unit — for a running oneshot, systemd returns immediately
+    """
     daemon.write_deploy_unit(name)
     daemon.daemon_reload()
-    # Restart if already deployed so re-triggering redeploys cleanly.
-    daemon.stop_unit(daemon.deploy_unit_name(name), disable=False)
+    daemon.reset_failed_unit(daemon.deploy_unit_name(name))
     daemon.start_unit(daemon.deploy_unit_name(name), enable=False)
 
 
@@ -269,8 +276,7 @@ def site_rename(name):
 
     if was_running:
         try:
-            svc = build_service(new_name, info.get("mode", "local"))
-            svc.start(info.get("repo"), info.get("port"))
+            _trigger_deploy(new_name)
         except WebifyError:
             pass
 
