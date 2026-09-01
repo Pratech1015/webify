@@ -50,3 +50,14 @@ def list_services() -> List[Dict]:
         {"name": name, **info}
         for name, info in sorted(services.items())
     ]
+
+
+def rename_service(old_name: str, new_name: str) -> None:
+    state = _load()
+    svc = state["services"].pop(old_name, None)
+    if svc is None:
+        raise ValueError(f"No service named '{old_name}'.")
+    if new_name in state["services"]:
+        raise ValueError(f"A service named '{new_name}' already exists.")
+    state["services"][new_name] = svc
+    _save(state)

@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block title %}{{ site.name }} — Webify{% endblock %}
+{% block content %}
+<div class="topbar">
+  <h1>{{ site.name }}</h1>
+  <div class="actions">
+    {% if 'running' in site.status %}
+      <button class="btn btn-secondary" onclick="api('/site/{{ site.name }}/stop')">Stop</button>
+      <button class="btn btn-secondary" onclick="api('/site/{{ site.name }}/restart')">Restart</button>
+    {% else %}
+      <button class="btn btn-primary" onclick="api('/site/{{ site.name }}/start')">Start</button>
+    {% endif %}
+  </div>
+</div>
+
+<div style="display:flex;gap:20px;margin-bottom:24px;flex-wrap:wrap">
+  <div style="flex:1;min-width:200px">
+    <div style="font-size:12px;color:#556677;margin-bottom:4px">Status</div>
+    {% if 'running' in site.status %}
+      <span class="status status-running"><span class="status-dot"></span>{{ site.status }}</span>
+    {% else %}
+      <span class="status status-stopped"><span class="status-dot"></span>{{ site.status }}</span>
+    {% endif %}
+  </div>
+  <div style="flex:1;min-width:200px">
+    <div style="font-size:12px;color:#556677;margin-bottom:4px">URL</div>
+    <span style="font-family:monospace;font-size:14px">{{ site.url or '—' }}</span>
+  </div>
+  <div style="flex:1;min-width:200px">
+    <div style="font-size:12px;color:#556677;margin-bottom:4px">Port</div>
+    <span style="font-size:14px">{{ site.port or '—' }}</span>
+  </div>
+  <div style="flex:1;min-width:200px">
+    <div style="font-size:12px;color:#556677;margin-bottom:4px">Mode</div>
+    <span style="font-size:14px">{{ site.mode }}</span>
+  </div>
+</div>
+
+<div class="tabs">
+  <a href="#" class="active" onclick="showTab('deploys',this);return false">Deploys</a>
+  <a href="#" onclick="showTab('settings',this);return false">Settings</a>
+</div>
+
+<div id="tab-deploys">
+  <div class="card">
+    <div class="card-header">
+      <h3>Deploy log</h3>
+      <button class="btn btn-secondary btn-sm" onclick="loadLogs()">Refresh</button>
+    </div>
+    <div class="card-body">
+      <div id="logbox" class="logbox" style="min-height:200px">Loading logs…</div>
+    </div>
+  </div>
+</div>
+
+<div id="tab-settings" style="display:none">
+  <div class="card">
+    <div class="card-header"><h3>Site settings</h3></div>
+    <div class="card-body">
+      <div style="margin-bottom:20px">
+        <div style="font-size:12px;color:#556677;margin-bottom:4px">Repository</div>
+        <div style="font-family:monospace;font-size:13px;word-break:break-all">{{ site.repo }}</div>
+      </div>
+      {% if site.served %}
+      <div style="margin-bottom:20px">
+        <div style="font-size:12px;color:#556677;margin-bottom:4px">Serving from</div>
+        <div style="font-family:monospace;font-size:13px;word-break:break-all">{{ site.served }}</div>
+      </div>
+      {% endif %}
+      {% if site.command %}
+      <div style="margin-bottom:20px">
+        <div style="font-size:12px;color:#556677;margin-bottom:4px">Command</div>
+        <div style="font-family:monospace;font-size:13px;word-break:break-all">{{ site.command }}</div>
+      </div>
+      {% endif %}
+
+      <div style="margin-bottom:20px">
+        <label style="font-size:13px;font-weight:500;color:#8899aa;display:block;margin-bottom:6px">Rename site</label>
+        <div style="display:flex;gap:8px">
+          <input id="rename-input" type="text" value="{{ site.name }}" style="flex:1;padding:8px 12px;background:#0e1e25;border:1px solid rgba(255,255,255,.12);border-radius:6px;color:#fff;font-size:14px;outline:none">
+          <button class="btn btn-secondary" onclick="renameSite()">Rename</button>
+        </div>
+      </div>
+
+      <div style="border-top:1px solid rgba(255,255,255,.07);padding-top:20px;margin-top:8px">
+        <label style="font-size:13px;font-weight:500;color:#ff6b7a;display:block;margin-bottom:6px">Danger zone</label>
+        <button class="btn btn-danger" onclick="if(confirm('Delete {{ site.name }}? This cannot be undone.')) api('/site/{{ site.name }}/delete')">Delete site</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="modal-bg" class="modal-bg" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="modal">
+    <h3 id="modal-title"></h3>
+    <div id="modal-body"></div>
+    <div class="actions">
+      <button class="btn btn-secondary" onclick="document.getElementById('modal-bg').classList.remove('show')">Cancel</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+function showTab(name, el) {
+  document.querySelectorAll('[id^="tab-"]').forEach(t => t.style.display = 'none');
+  document.getElementById('tab-' + name).style.display = '';
+  document.querySelectorAll('.tabs a').forEach(a => a.classList.remove('active'));
+  el.classList.add('active');
+  if (name === 'deploys') loadLogs();
+}
+
+function loadLogs() {
+  fetch('/site/{{ site.name }}/logs?lines=200')
+    .then(r => r.json())
+    .then(d => {
+      const box = document.getElementById('logbox');
+      box.textContent = d.logs || 'No logs yet.';
+      box.scrollTop = box.scrollHeight;
+    })
+    .catch(() => { document.getElementById('logbox').textContent = 'Failed to load logs.'; });
+}
+
+function api(url, method='POST') {
+  fetch(url, {method, headers:{'Content-Type':'application/json'}})
+    .then(r => r.json())
+    .then(d => { if(d.error) toast(d.error, true); else location.reload(); })
+    .catch(e => toast('Request failed', true));
+}
+
+function renameSite() {
+  const newName = document.getElementById('rename-input').value.trim();
+  if (!newName || newName === '{{ site.name }}') return;
+  if (!confirm('Rename {{ site.name }} to ' + newName + '?')) return;
+  fetch('/site/{{ site.name }}/rename', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({name: newName})
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.error) toast(d.error, true);
+    else window.location.href = '/site/' + d.new_name;
+  })
+  .catch(() => toast('Rename failed', true));
+}
+
+function toast(msg, err) {
+  const t = document.createElement('div');
+  t.className = 'toast ' + (err ? 'toast-err' : 'toast-ok');
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+loadLogs();
+</script>
+{% endblock %}

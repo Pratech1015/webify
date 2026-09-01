@@ -130,6 +130,15 @@ def remove_units(name: str) -> None:
             p.unlink()
 
 
+def rename_units(old_name: str, new_name: str) -> None:
+    """Rename systemd unit files from old_name to new_name."""
+    for suffix in ("", "-tunnel"):
+        old_path = _unit_dir() / f"webify-{old_name}{suffix}.service"
+        new_path = _unit_dir() / f"webify-{new_name}{suffix}.service"
+        if old_path.exists():
+            old_path.rename(new_path)
+
+
 def _write_unit(path: Path, content: str):
     _unit_dir().mkdir(parents=True, exist_ok=True)
     path.write_text(content)

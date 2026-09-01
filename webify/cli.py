@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -325,6 +326,73 @@ def cmd_remove(args):
     _ok(f"Service {args.name} removed.")
 
 
+def cmd_rename(args):
+    _validate_name(args.old)
+    _validate_name(args.new)
+    if args.old == args.new:
+        _e("Old and new names are the same.")
+        sys.exit(1)
+
+    info = state.get_service(args.old)
+    if not info:
+        _e(f"No service named '{args.old}'. Run 'webify list' to see services.")
+        sys.exit(1)
+    if state.get_service(args.new):
+        _e(f"A service named '{args.new}' already exists.")
+        sys.exit(1)
+
+    was_running = "running" in build_service(args.old, info.get("mode", "local")).status()
+
+    if was_running:
+        _info(f"Stopping {args.old} …")
+        try:
+            svc, _ = _require_service(args.old)
+            svc.stop()
+        except WebifyError:
+            pass
+
+    _info(f"Renaming {args.old} → {args.new} …")
+
+    daemon.rename_units(args.old, args.new)
+
+    import shutil
+    old_dir = info.get("dir")
+    if old_dir:
+        old_path = Path(old_dir)
+        new_path = old_path.parent / args.new
+        if old_path.exists():
+            old_path.rename(new_path)
+            info["dir"] = str(new_path)
+
+    info["unit"] = daemon.http_unit_name(args.new)
+    state.rename_service(args.old, args.new)
+    daemon.daemon_reload()
+
+    if was_running:
+        _info(f"Restarting {args.new} …")
+        try:
+            svc = build_service(args.new, info.get("mode", "local"))
+            svc.start(info.get("repo"), info.get("port"))
+            state.save_service(args.new, info)
+        except WebifyError as exc:
+            _e(f"Renamed but could not restart: {exc}")
+            state.save_service(args.new, info)
+            return
+
+    _ok(f"Service renamed: {args.old} → {args.new}")
+
+
+def cmd_web(args):
+    ensure_dirs()
+    try:
+        from .web import run_web
+    except ImportError:
+        _e("Flask is required for the web dashboard.")
+        _info("Install it with: pip install webify[web]")
+        sys.exit(1)
+    run_web(port=args.port)
+
+
 def pid_of(info):
     try:
         unit = info.get("unit")
@@ -374,6 +442,16 @@ def build_parser():
     logs.add_argument("name")
     logs.add_argument("--lines", type=int, default=50, help="Number of log lines")
     logs.set_defaults(func=cmd_logs)
+
+    rename = sub.add_parser("rename", help="Rename a service")
+    rename.add_argument("old", help="Current name")
+    rename.add_argument("new", help="New name")
+    rename.set_defaults(func=cmd_rename)
+
+    web = sub.add_parser("web", help="Start the web dashboard")
+    web.add_argument("--port", type=int, default=int(os.environ.get("WEBIFY_WEB_PORT", 8000)),
+                     help="Dashboard port (default: 8000, or WEBIFY_WEB_PORT env)")
+    web.set_defaults(func=cmd_web)
 
     return p
 

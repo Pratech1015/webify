@@ -19,6 +19,9 @@ classifiers = [
 ]
 dependencies = []
 
+[project.optional-dependencies]
+web = ["flask>=2.0"]
+
 [project.urls]
 Homepage = "https://github.com/webify/webify"
 Repository = "https://github.com/webify/webify"
@@ -29,5 +32,8 @@ webify = "webify.cli:main"
 
 [tool.setuptools]
 packages = ["webify", "webify.services"]
+
+[tool.setuptools.package-data]
+webify = ["templates/*.html", "static/*"]
 
 
