@@ -16,13 +16,12 @@ die()  { printf '\033[31merror:\033[0m %s\n' "$*" >&2; exit 1; }
 
 REPO_URL="https://raw.githubusercontent.com/Pratech1015/webify/main"
 SOURCES_FILE="/etc/apt/sources.list.d/webify.list"
-KEYRING_DIR="/usr/share/keyrings"
 
 # Write the source list
 info "Adding Webify APT repository..."
 cat > "$SOURCES_FILE" <<SOURCES
 # Webify — self-hosted Netlify alternative
-deb [trusted=yes] ${REPO_URL}/ repo/ stable
+deb [trusted=yes] ${REPO_URL}/repo stable main
 SOURCES
 ok "Repository added to ${SOURCES_FILE}"
 
