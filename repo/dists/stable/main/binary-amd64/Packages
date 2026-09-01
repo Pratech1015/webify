@@ -1,14 +1,14 @@
 Package: webify
-Version: 0.2.7
+Version: 0.2.8
 Architecture: all
 Maintainer: Webify Contributors <webify@localhost>
 Depends: python3 (>= 3.8), git, python3-flask, python3-waitress
 Recommends: nginx, cloudflared
-Filename: pool/main/webify_0.2.7_all.deb
-Size: 24856
-MD5sum: fe9238a68870badcaec7e6c7b4ea4eff
-SHA1: 7ee3376817ac3f841856f807b66db8d6ea7e3c62
-SHA256: a3abc5bafed5e2505e527853d8de95ab3d4ed1708b84837c9e2afd7472776193
+Filename: pool/main/webify_0.2.8_all.deb
+Size: 25460
+MD5sum: 058ecf85d147a5f65cbca5f87d349954
+SHA1: b83c3548f221f16c54e3c44576cfec9f16b87488
+SHA256: 9e8df6b9eb75ceb8c5f600964d654152d702ead2fefdabeb312b69303129e0ff
 Description: Self-hosted Netlify alternative
  Deploy static sites and apps from Git repos.
  Includes web dashboard and systemd service.

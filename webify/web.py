@@ -46,8 +46,9 @@ def _service_info(name: str) -> dict:
         "url": url,
         "status": status,
         "running": "running" in status,
-        "deploy": deploy_status(name, mode=info.get("mode", "local"), running="running" in status),
+        "deploy": deploy_status(name, info=info, running="running" in status),
         "deploying": deploy_active(name),
+        "deploy_error": info.get("deploy_error") or "",
         "pid": pid,
         "served": info.get("served"),
         "command": info.get("command"),
@@ -61,21 +62,22 @@ def deploy_active(name: str) -> bool:
     return daemon.unit_active(daemon.deploy_unit_name(name))
 
 
-def deploy_status(name: str, mode: str = None, running: bool = False) -> str:
+def deploy_status(name: str, info: dict = None, running: bool = False) -> str:
     """Describe the deploy state: deploying | published | failed | not-deployed.
 
-    Avoids re-reading state here (a background deploy may be rewriting it, which
-    can surface as a transient None); the caller passes the known mode/status.
+    Uses the state-recorded deploy_status (written by the deploy service) as the
+    source of truth, falling back to live systemd checks. Does not re-read state
+    here (a background deploy may be rewriting it, which can surface as a
+    transient None); the caller passes the known info dict.
     """
-    unit = daemon.deploy_unit_name(name)
-    if daemon.unit_active(unit):
-        return "deploying"
     if running:
         return "published"
-    # Deploy unit exists but site isn't running -> last deploy failed or never ran.
-    from pathlib import Path
-    if (Path.home() / ".config" / "systemd" / "user" / f"{unit}").exists():
+    if daemon.unit_active(daemon.deploy_unit_name(name)):
+        return "deploying"
+    if info and info.get("deploy_status") == "failed":
         return "failed"
+    if info and info.get("deploy_status") == "ok":
+        return "published"
     return "not-deployed"
 
 
@@ -179,7 +181,7 @@ def site_logs(name):
         "logs": log_text,
         "deploying": deploy_active(name),
         "failed": deploy_active(name) is False and deploy_status(
-            name, mode=info.get("mode", "local"), running="running" in build_service(name, info.get("mode", "local")).status()
+            name, info=info, running=info.get("deploy_status") == "ok"
         ) == "failed",
     })
 

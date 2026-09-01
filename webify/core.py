@@ -30,7 +30,7 @@ def clone_repo(repo_url: str, dest: Path) -> None:
     if dest.exists():
         raise WebifyError(f"Destination already exists and is not a git repo: {dest}")
     print(f"  Cloning {repo_url} ...", flush=True)
-    proc = run(["git", "clone", "--depth", "1", repo_url, str(dest)], capture=True)
+    proc = run(["git", "clone", "--depth", "1", repo_url, str(dest)], check=False, capture=True)
     if proc.returncode != 0:
         raise WebifyError(
             f"Failed to clone repo. Is it public and valid?\n{proc.stderr.strip()}"

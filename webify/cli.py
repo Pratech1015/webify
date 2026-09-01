@@ -276,6 +276,13 @@ def cmd_status(args):
         _e(str(exc)); sys.exit(1)
     print(f"{BOLD}{args.name}{RESET} ({info.get('mode')})")
     print(f"  status : {svc.status()}")
+    deploy_st = info.get("deploy_status")
+    if deploy_st == "failed":
+        print(f"  deploy : FAILED")
+        print(f"  error  : {info.get('deploy_error')}")
+        _info(f"  Fix the repo, then redeploy: webify start {args.name}")
+    elif "running" in svc.status():
+        print(f"  deploy : ok")
     print(f"  pid    : {pid_of(info)}")
     print(f"  url    : {svc.url()}")
     print(f"  repo   : {info.get('repo')}")

@@ -2,7 +2,11 @@
 
 Runs cloning, dependency install, and building in the background so the
 dashboard/CLI never block. On success it writes the site's serve unit, starts
-it, and updates state. All output is captured in the deploy unit's journal.
+it, and records `deploy_status: ok` in state. On failure it stops cleanly,
+records `deploy_status: failed` + `deploy_error` in state (so the dashboard can
+show the error and let the user fix + redeploy), and prints the error to its
+journal. A failed deploy leaves the service DISABLED (nothing running) — never
+half-started.
 
 Running: python -m webify.deploy_service <name>
 """
@@ -27,8 +31,23 @@ def deploy(name: str):
 
     svc = build_service(name, info.get("mode", "local"))
     print(f"Deploying {name} (mode={svc.mode}) ...", flush=True)
-    new_info = svc.start(info.get("repo"), port)
-    state.save_service(name, {**info, **new_info})
+    try:
+        new_info = svc.start(info.get("repo"), port)
+    except Exception as exc:
+        # Any failure (WebifyError, CalledProcessError, ...) -> record a clean
+        # "failed" state so the dashboard shows the error and the service stays
+        # DISABLED (nothing running) for the user to fix and redeploy.
+        state.save_service(name, {
+            **info,
+            "deploy_status": "failed",
+            "deploy_error": str(exc),
+            "url": svc.url(),
+        })
+        if isinstance(exc, WebifyError):
+            raise
+        raise WebifyError(str(exc)) from exc
+
+    state.save_service(name, {**info, **new_info, "deploy_status": "ok", "deploy_error": ""})
     print(f"Deploy complete: {name} -> {new_info.get('url') or svc.url()}", flush=True)
 
 
@@ -40,7 +59,15 @@ def main():
     try:
         deploy(name)
     except WebifyError as exc:
-        print(f"Deploy failed: {exc}", file=sys.stderr)
+        # Print the error prominently so it's easy to read/share, then exit non-zero.
+        print("", file=sys.stderr)
+        print("──────────────────────────────────────────────", file=sys.stderr)
+        print(f"DEPLOY FAILED for '{name}'", file=sys.stderr)
+        print("──────────────────────────────────────────────", file=sys.stderr)
+        print(str(exc), file=sys.stderr)
+        print("", file=sys.stderr)
+        print("The service is kept registered but DISABLED. Fix the repo, then", file=sys.stderr)
+        print(f"run 'webify start {name}' or click Deploy in the dashboard.", file=sys.stderr)
         return 1
     except Exception:
         traceback.print_exc()
