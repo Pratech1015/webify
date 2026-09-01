@@ -46,7 +46,7 @@ def _service_info(name: str) -> dict:
         "url": url,
         "status": status,
         "running": "running" in status,
-        "deploy": deploy_status(name),
+        "deploy": deploy_status(name, mode=info.get("mode", "local"), running="running" in status),
         "deploying": deploy_active(name),
         "pid": pid,
         "served": info.get("served"),
@@ -61,12 +61,16 @@ def deploy_active(name: str) -> bool:
     return daemon.unit_active(daemon.deploy_unit_name(name))
 
 
-def deploy_status(name: str) -> str:
-    """Describe the deploy state: deploying | published | failed | not-deployed."""
+def deploy_status(name: str, mode: str = None, running: bool = False) -> str:
+    """Describe the deploy state: deploying | published | failed | not-deployed.
+
+    Avoids re-reading state here (a background deploy may be rewriting it, which
+    can surface as a transient None); the caller passes the known mode/status.
+    """
     unit = daemon.deploy_unit_name(name)
     if daemon.unit_active(unit):
         return "deploying"
-    if "running" in build_service(name, state.get_service(name)["mode"]).status():
+    if running:
         return "published"
     # Deploy unit exists but site isn't running -> last deploy failed or never ran.
     from pathlib import Path
@@ -174,7 +178,9 @@ def site_logs(name):
     return jsonify({
         "logs": log_text,
         "deploying": deploy_active(name),
-        "failed": deploy_active(name) is False and deploy_status(name) == "failed",
+        "failed": deploy_active(name) is False and deploy_status(
+            name, mode=info.get("mode", "local"), running="running" in build_service(name, info.get("mode", "local")).status()
+        ) == "failed",
     })
 
 
