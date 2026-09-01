@@ -89,3 +89,11 @@ case "$distro_id" in
 esac
 
 ok "Webify install complete."
+
+# Offer systemd dashboard setup
+if [[ $EUID -eq 0 ]] || has sudo; then
+    echo ""
+    info "To run the Webify dashboard as a system service on port 8000:"
+    info "  sudo ./setup-systemd.sh"
+    info "  Then visit http://localhost:8000"
+fi

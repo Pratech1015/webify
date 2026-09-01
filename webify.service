@@ -1,0 +1,21 @@
+[Unit]
+Description=Webify Web Dashboard
+After=network.target
+
+[Service]
+Type=simple
+User=webify
+Group=webify
+Environment=WEBIFY_HOME=/var/lib/webify
+Environment=WEBIFY_WEB_PORT=8000
+ExecStart=/usr/bin/webify web
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/var/lib/webify
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
