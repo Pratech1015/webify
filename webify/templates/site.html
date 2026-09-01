@@ -84,7 +84,7 @@
 
       <div style="border-top:1px solid rgba(255,255,255,.07);padding-top:20px;margin-top:8px">
         <label style="font-size:13px;font-weight:500;color:#ff6b7a;display:block;margin-bottom:6px">Danger zone</label>
-        <button class="btn btn-danger" onclick="if(confirm('Delete {{ site.name }}? This cannot be undone.')) api('/site/{{ site.name }}/delete')">Delete site</button>
+        <button class="btn btn-danger" onclick="deleteSite()">Delete site</button>
       </div>
     </div>
   </div>
@@ -126,6 +126,20 @@ function api(url, method='POST') {
     .then(r => r.json())
     .then(d => { if(d.error) toast(d.error, true); else location.reload(); })
     .catch(e => toast('Request failed', true));
+}
+
+function deleteSite() {
+  if (!confirm('Delete {{ site.name }}? This cannot be undone.')) return;
+  fetch('/site/{{ site.name }}/delete', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'}
+  })
+    .then(r => r.json())
+    .then(d => {
+      if (d.error) { toast(d.error, true); return; }
+      window.location.href = '/';
+    })
+    .catch(() => toast('Delete failed', true));
 }
 
 function renameSite() {
