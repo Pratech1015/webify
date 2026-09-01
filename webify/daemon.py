@@ -39,8 +39,33 @@ def http_unit_name(name: str) -> str:
     return f"webify-{name}.service"
 
 
+def web_unit_name() -> str:
+    return "webify-web.service"
+
+
 def tunnel_unit_name(name: str) -> str:
     return f"webify-{name}-tunnel.service"
+
+
+def write_web_unit(port: int) -> None:
+    """Write the systemd user unit for the Webify web dashboard."""
+    python = _python_bin()
+    content = f"""# Managed by Webify — do not edit manually.
+[Unit]
+Description=Webify Web Dashboard
+After=network.target
+
+[Service]
+Type=simple
+Environment=WEBIFY_WEB_PORT={port}
+ExecStart={python} -m webify.web_service {port}
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target
+"""
+    _write_unit(_unit_dir() / web_unit_name(), content)
 
 
 def _systemctl(args, check=True):

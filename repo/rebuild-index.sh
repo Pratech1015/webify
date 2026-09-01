@@ -8,11 +8,16 @@ cd "$(dirname "$0")"
 
 echo "Rebuilding APT package index..."
 
-# Generate Packages
+# Generate Packages (architecture-independent)
 dpkg-scanpackages pool/main /dev/null > dists/stable/main/binary-all/Packages 2>/dev/null
 
-# Compress
+# Mirror to amd64 (native arch) so apt finds the package
+mkdir -p dists/stable/main/binary-amd64
+cp dists/stable/main/binary-all/Packages dists/stable/main/binary-amd64/Packages
+
+# Compress both
 gzip -9c dists/stable/main/binary-all/Packages > dists/stable/main/binary-all/Packages.gz
+gzip -9c dists/stable/main/binary-amd64/Packages > dists/stable/main/binary-amd64/Packages.gz
 
 echo "Index updated: $(grep '^Package:' dists/stable/main/binary-all/Packages | wc -l) package(s)"
 echo "Packages size: $(du -h dists/stable/main/binary-all/Packages | cut -f1)"

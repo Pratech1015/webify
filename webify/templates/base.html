@@ -11,7 +11,7 @@ a{color:#00d4aa;text-decoration:none}a:hover{text-decoration:underline}
 /* sidebar */
 .sidebar{position:fixed;top:0;left:0;width:240px;height:100vh;background:#122631;border-right:1px solid rgba(255,255,255,.07);display:flex;flex-direction:column;z-index:10}
 .sidebar .logo{padding:20px 24px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,.07)}
-.sidebar .logo .mark{width:28px;height:28px;background:linear-gradient(135deg,#00d4aa,#0099cc);border-radius:6px}
+.sidebar .logo .mark{width:28px;height:28px}
 .sidebar .logo span{font-size:17px;font-weight:600;color:#fff;letter-spacing:.3px}
 .sidebar nav{flex:1;padding:12px 0}
 .sidebar nav a{display:flex;align-items:center;gap:10px;padding:10px 24px;color:#8899aa;font-size:14px;transition:all .15s}
@@ -80,7 +80,7 @@ a{color:#00d4aa;text-decoration:none}a:hover{text-decoration:underline}
 </head>
 <body>
 <aside class="sidebar">
-  <div class="logo"><div class="mark"></div><span>Webify</span></div>
+  <div class="logo"><img src="/static/logo.svg" alt="Webify" class="mark"><span>Webify</span></div>
   <nav>
     <a href="/" class="{% if request.endpoint == 'index' %}active{% endif %}">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>

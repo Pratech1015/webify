@@ -220,7 +220,9 @@ def site_rename(name):
 
 
 def run_web(host: str = "0.0.0.0", port: int = None):
+    """Start the dashboard in foreground using the waitress production server."""
     ensure_dirs()
     p = port or _get_port()
     print(f"Webify dashboard running at http://localhost:{p}")
-    app.run(host=host, port=p, debug=False)
+    from waitress import serve
+    serve(app, host=host, port=p, threads=4)

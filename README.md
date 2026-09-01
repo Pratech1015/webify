@@ -111,8 +111,30 @@ webify restart <name>                                        # restart the units
 webify enable <name> / disable <name>                        # auto-start on login
 webify logs <name> [--lines N]                               # tail service (journal) logs
 webify remove <name>                                         # stop, disable, and delete
+webify rename <old> <new>                                    # rename a service
+webify web                                                   # start/stop the dashboard (toggle)
+webify web --status                                          # show dashboard service status
+webify web --stop / --restart                                # stop / restart the dashboard
+webify web --port 9000                                       # change port, then start
+webify web --serve [--port N]                                # run in foreground (production)
 webify --version
 ```
+
+### Web dashboard
+
+The dashboard is its own **systemd user service** (`webify-web.service`) and runs
+a production WSGI server (waitress) — not Flask's dev server:
+
+```bash
+webify web               # toggle: start if stopped, stop if running
+webify web --status      # stopped | running (enabled)
+webify web --stop        # stop the dashboard
+webify web --restart     # restart it
+```
+
+Open http://localhost:8000 to manage all your sites from the browser. The
+dashboard and the CLI share the same state and systemd units, so changes in one
+are reflected in the other.
 
 ## How it works
 
@@ -144,6 +166,8 @@ webify/
 │  ├─ core.py                # git, port/path detection, systemd detection
 │  ├─ daemon.py              # systemd user-unit writer + systemctl wrapper
 │  ├─ state.py               # persistent JSON state
+│  ├─ web.py                 # Flask dashboard app (routes + views)
+│  ├─ web_service.py         # waitress production entry point for the dashboard unit
 │  └─ services/
 │     └─ __init__.py         # Local / Cloudflared / Nginx services
 ├─ packaging/

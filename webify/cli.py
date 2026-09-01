@@ -383,14 +383,50 @@ def cmd_rename(args):
 
 
 def cmd_web(args):
+    # --serve: run in foreground (production waitress server).
+    if args.serve:
+        ensure_dirs()
+        try:
+            from .web import run_web
+        except ImportError:
+            _e("Flask/waitress is required for the web dashboard.")
+            _info("Install it with: pip install webify[web]")
+            sys.exit(1)
+        run_web(port=args.port)
+        return
+
+    port = args.port
     ensure_dirs()
+
+    # Ensure the systemd unit exists with the current port.
     try:
-        from .web import run_web
-    except ImportError:
-        _e("Flask is required for the web dashboard.")
-        _info("Install it with: pip install webify[web]")
+        daemon.write_web_unit(port)
+        daemon.daemon_reload()
+    except WebifyError as exc:
+        _e(f"Could not set up dashboard service: {exc}")
         sys.exit(1)
-    run_web(port=args.port)
+
+    unit = daemon.web_unit_name()
+
+    if args.stop:
+        daemon.stop_unit(unit)
+        _ok("Webify dashboard stopped.")
+        return
+    if args.restart:
+        daemon.restart_unit(unit)
+        _ok("Webify dashboard restarted.")
+        return
+    if args.status:
+        print(daemon.unit_status(unit))
+        return
+
+    # Default: toggle start/stop.
+    if daemon.unit_active(unit):
+        daemon.stop_unit(unit)
+        _ok("Webify dashboard stopped.")
+    else:
+        daemon.start_unit(unit)
+        _ok(f"Webify dashboard started at http://localhost:{port}")
 
 
 def pid_of(info):
@@ -448,9 +484,14 @@ def build_parser():
     rename.add_argument("new", help="New name")
     rename.set_defaults(func=cmd_rename)
 
-    web = sub.add_parser("web", help="Start the web dashboard")
+    web = sub.add_parser("web", help="Start/stop the web dashboard service")
     web.add_argument("--port", type=int, default=int(os.environ.get("WEBIFY_WEB_PORT", 8000)),
                      help="Dashboard port (default: 8000, or WEBIFY_WEB_PORT env)")
+    web.add_argument("--serve", action="store_true",
+                     help="Run in foreground (production server; used by systemd)")
+    web.add_argument("--stop", action="store_true", help="Stop the dashboard service")
+    web.add_argument("--restart", action="store_true", help="Restart the dashboard service")
+    web.add_argument("--status", action="store_true", help="Show dashboard service status")
     web.set_defaults(func=cmd_web)
 
     return p
