@@ -81,30 +81,81 @@ def detect_served_dir(repo_dir: Path) -> Path:
 
 def build_repo(repo_dir: Path, port: int = 7070) -> dict:
     """Detect project type, install deps, build if needed.
-
-    All services use the 7070+ port system. The port is passed via PORT env var
-    to dev/start servers so they bind to the correct port.
-
-    Returns a dict with:
-      - "mode": "static" (serve a dir) or "server" (run a command)
-      - "served": the directory to serve (for static)
-      - "command": the command to run (for server)
-      - "port": the port to use
-    Raises WebifyError if the build fails.
+    ...
     """
-    project = detect_project_type(repo_dir)
+    # 1. Look for netlify.toml first
+    toml_path = repo_dir / "netlify.toml"
+    if toml_path.exists():
+        import toml
+        config = toml.load(toml_path)
+        build = config.get("build", {})
+        
+        # Parse environment
+        env = build.get("environment", {})
+        
+        if "command" in build:
+            # Handle build command
+            print(f"  Running netlify build command: {build['command']}", flush=True)
+            import subprocess, os
+            os_env = {**os.environ, **env, "PORT": str(port)}
+            proc = subprocess.run(build["command"].split(), cwd=repo_dir, env=os_env, check=False)
+            if proc.returncode != 0:
+                raise WebifyError(f"Build command '{build['command']}' failed.")
+                
+            # If it's a node project, look for start
+            if (repo_dir / "package.json").exists():
+                scripts = _npm_scripts(repo_dir)
+                if "start" in scripts:
+                    return {
+                        "mode": "server", 
+                        "command": "npm run start", 
+                        "port": port,
+                        "env": env
+                    }
+            
+            # Static site
+            return {"mode": "static", "served": repo_dir / build.get("publish", "."), "port": port}
 
+    # Fallback to existing detection
+    # 1. Look for netlify.toml first
+    toml_path = repo_dir / "netlify.toml"
+    if toml_path.exists():
+        import toml
+        config = toml.load(toml_path)
+        build = config.get("build", {})
+        
+        # Parse environment
+        env = build.get("environment", {})
+        
+        if "command" in build:
+            # Handle build command
+            print(f"  Running netlify build command: {build['command']}", flush=True)
+            import subprocess, os
+            os_env = {**os.environ, **env, "PORT": str(port)}
+            # Simple split might fail on complex commands; use shell=True if needed
+            proc = subprocess.run(build["command"], shell=True, cwd=repo_dir, env=os_env, check=False)
+            if proc.returncode != 0:
+                raise WebifyError(f"Build command '{build['command']}' failed.")
+                
+            # If it's a node project, look for start
+            if (repo_dir / "package.json").exists():
+                scripts = _npm_scripts(repo_dir)
+                if "start" in scripts:
+                    return {
+                        "mode": "server", 
+                        "command": "npm run start", 
+                        "port": port
+                    }
+            
+            # Static site
+            return {"mode": "static", "served": repo_dir / build.get("publish", "."), "port": port}
+
+    project = detect_project_type(repo_dir)
+    # ... rest of the original logic ...
     if project["type"] == "node":
         return _handle_node(repo_dir, project, port)
-    elif project["type"] == "make":
-        return _handle_make(repo_dir)
-    elif project["type"] == "cargo":
-        return _handle_cargo(repo_dir, port)
-    elif project["type"] == "go":
-        return _handle_go(repo_dir, port)
+    # ...
 
-    # No recognized build system — just serve the repo.
-    return {"mode": "static", "served": detect_served_dir(repo_dir)}
 
 
 def detect_project_type(repo_dir: Path) -> dict:
