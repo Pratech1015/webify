@@ -148,6 +148,10 @@ def cmd_create(args):
 
     _info(f"Deploying {repo} → {name} (port {port}) in the background …")
     try:
+        # Mandatory watcher
+        daemon.write_watcher_unit(name)
+        daemon.start_watcher_unit(name)
+        
         _deploy_svc(name)
     except WebifyError as exc:
         _e(str(exc))
@@ -356,6 +360,7 @@ def cmd_remove(args):
     daemon.stop_unit(daemon.http_unit_name(args.name), disable=True)
     daemon.stop_unit(daemon.tunnel_unit_name(args.name), disable=True)
     daemon.stop_unit(daemon.deploy_unit_name(args.name), disable=True)
+    daemon.stop_unit(daemon.watcher_unit_name(args.name), disable=True)
     daemon.remove_units(args.name)
     daemon.daemon_reload()
     import shutil

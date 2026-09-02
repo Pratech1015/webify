@@ -177,7 +177,7 @@ WantedBy=default.target
 
 
 def remove_units(name: str) -> None:
-    for unit in (http_unit_name(name), tunnel_unit_name(name), deploy_unit_name(name)):
+    for unit in (http_unit_name(name), tunnel_unit_name(name), deploy_unit_name(name), watcher_unit_name(name)):
         p = _unit_dir() / unit
         if p.exists():
             p.unlink()
@@ -185,7 +185,7 @@ def remove_units(name: str) -> None:
 
 def rename_units(old_name: str, new_name: str) -> None:
     """Rename systemd unit files from old_name to new_name."""
-    for suffix in ("", "-tunnel", "-deploy"):
+    for suffix in ("", "-tunnel", "-deploy", "-watcher"):
         old_path = _unit_dir() / f"webify-{old_name}{suffix}.service"
         new_path = _unit_dir() / f"webify-{new_name}{suffix}.service"
         if old_path.exists():
