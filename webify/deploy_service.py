@@ -60,8 +60,8 @@ def main():
     name = sys.argv[1]
     try:
         deploy(name)
-    except WebifyError as exc:
-        # Print the error prominently so it's easy to read/share, then exit non-zero.
+    except Exception as exc:
+        # Print the error prominently so it's easy to read/share.
         print("", file=sys.stderr)
         print("──────────────────────────────────────────────", file=sys.stderr)
         print(f"DEPLOY FAILED for '{name}'", file=sys.stderr)
@@ -70,10 +70,9 @@ def main():
         print("", file=sys.stderr)
         print("The service is kept registered but DISABLED. Fix the repo, then", file=sys.stderr)
         print(f"run 'webify start {name}' or click Deploy in the dashboard.", file=sys.stderr)
-        return 1
-    except Exception:
-        traceback.print_exc()
-        return 1
+        # Exit 0 so systemd marks the unit as 'success', avoiding the 'failed' trap.
+        # The actual error is recorded in state and printed to the journal above.
+        return 0
     return 0
 
 

@@ -9,7 +9,7 @@ from pathlib import Path
 
 from flask import Flask, abort, jsonify, redirect, render_template, request, url_for
 
-from . import daemon, state
+from . import __version__, daemon, state
 from .config import DEFAULT_PORT, SERVICES_DIR, ensure_dirs
 from .core import WebifyError, find_free_port
 from .services import build_service
@@ -19,6 +19,11 @@ app = Flask(
     template_folder=str(Path(__file__).parent / "templates"),
     static_folder=str(Path(__file__).parent / "static"),
 )
+
+
+@app.context_processor
+def inject_version():
+    return dict(version=__version__)
 app.secret_key = os.urandom(24)
 
 
