@@ -116,6 +116,21 @@ def cmd_create(args):
 
     if not mode:
         mode = _ask_mode(default="local", interactive=interactive)
+    
+    # Check cloudflared
+    if mode == "cloudflared" and not daemon.is_cloudflared_ready():
+        if interactive:
+            print(f"{YELLOW}Warning: Cloudflared is not configured.{RESET}")
+            choice = _input("Continue as local mode instead? [Y/n]").lower()
+            if choice != 'n':
+                mode = 'local'
+            else:
+                _e("Cloudflared mode cancelled.")
+                sys.exit(1)
+        else:
+            _e("Cloudflared is not configured.")
+            sys.exit(1)
+
     if not port:
         port = _port_for(port, interactive=interactive)
 

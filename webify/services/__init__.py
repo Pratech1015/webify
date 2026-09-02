@@ -111,15 +111,6 @@ class CloudflaredService(BaseService):
     def precheck(self, port: int, served: Path):
         _require("cloudflared")
 
-    def extra_after_start(self, port: int, served: Path):
-        _require("cloudflared")
-        daemon.write_tunnel_unit(self.name, port)
-        daemon.daemon_reload()
-        daemon.start_unit(tunnel_unit_name(self.name))
-
-    def extra_after_stop(self):
-        daemon.stop_unit(tunnel_unit_name(self.name))
-
     def status(self) -> str:
         base = unit_status(http_unit_name(self.name))
         if unit_active(tunnel_unit_name(self.name)):
@@ -129,8 +120,8 @@ class CloudflaredService(BaseService):
     def url(self) -> str:
         return _tunnel_url(self.name) or self._local_url()
 
-    def _local_url(self):
-        return f"http://localhost:{_port(self)}"
+    def extra_after_stop(self):
+        daemon.stop_tunnel_unit(self.name)
 
 
 class NginxService(BaseService):

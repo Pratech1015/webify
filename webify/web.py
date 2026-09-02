@@ -121,6 +121,9 @@ def new_site():
         mode = request.form.get("mode", "local")
         port_raw = request.form.get("port", "").strip()
 
+        if mode == "cloudflared" and not daemon.is_cloudflared_ready():
+            return render_template("new.html", error="Cloudflared is not configured (not logged in).")
+
         if not name or not repo:
             return render_template("new.html", error="Name and repo URL are required.")
         if not re.match(r"^[a-zA-Z0-9_-]+$", name):

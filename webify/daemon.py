@@ -274,3 +274,40 @@ def _which(binary: str) -> str:
 
 def parse_status_name(name: str) -> str:
     return name
+
+
+def is_cloudflared_ready() -> bool:
+    """Check if cloudflared is installed and configured."""
+    try:
+        # 'cloudflared tunnel list' fails if not logged in
+        subprocess.run(["cloudflared", "tunnel", "list"], capture_output=True, check=True)
+        return True
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return False
+
+
+def write_tunnel_unit(name: str, tunnel_name: str) -> None:
+    """Write systemd unit for persistent cloudflared tunnel."""
+    config = Path.home() / ".cloudflared" / "config.yml"
+    content = f"""[Unit]
+Description=Webify tunnel for {name}
+After=network.target webify-{name}.service
+Requires=webify-{name}.service
+
+[Service]
+ExecStart=/usr/bin/cloudflared tunnel --config {config} run {tunnel_name}
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
+"""
+    _write_unit(_unit_dir() / tunnel_unit_name(name), content)
+
+
+def start_tunnel_unit(name: str) -> None:
+    start_unit(tunnel_unit_name(name), enable=False)
+
+
+def stop_tunnel_unit(name: str) -> None:
+    stop_unit(tunnel_unit_name(name), disable=True)

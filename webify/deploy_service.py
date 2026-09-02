@@ -14,7 +14,7 @@ Running: python -m webify.deploy_service <name>
 import sys
 import traceback
 
-from . import state
+from . import daemon, state
 from .core import WebifyError
 from .services import build_service
 
@@ -33,6 +33,11 @@ def deploy(name: str):
     print(f"Deploying {name} (mode={svc.mode}) ...", flush=True)
     try:
         new_info = svc.start(info.get("repo"), port)
+        if svc.mode == "cloudflared":
+            print("  Starting cloudflared tunnel...", flush=True)
+            daemon.write_tunnel_unit(name, name)
+            daemon.daemon_reload()
+            daemon.start_tunnel_unit(name)
     except Exception as exc:
         # Build failed: write a safe, disabled placeholder unit so 'webify start'
         # doesn't throw "unit not found", then record the failure.
