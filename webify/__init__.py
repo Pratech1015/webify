@@ -1,3 +1,3 @@
 """Webify — a self-hosted Netlify alternative for Linux."""
 
-__version__ = "0.2.11"
+__version__ = "0.2.15"

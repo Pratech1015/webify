@@ -51,6 +51,37 @@ def deploy_unit_name(name: str) -> str:
     return f"webify-{name}-deploy.service"
 
 
+def watcher_unit_name(name: str) -> str:
+    return f"webify-{name}-watcher.service"
+
+
+def write_watcher_unit(name: str) -> None:
+    """Write systemd unit for background repo watcher."""
+    python = _python_bin()
+    content = f"""# Managed by Webify — do not edit manually.
+[Unit]
+Description=Webify watcher for {name}
+After=network.target
+
+[Service]
+ExecStart={python} -m webify.watcher_service {name}
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target
+"""
+    _write_unit(_unit_dir() / watcher_unit_name(name), content)
+
+
+def start_watcher_unit(name: str) -> None:
+    start_unit(watcher_unit_name(name), enable=False)
+
+
+def stop_watcher_unit(name: str) -> None:
+    stop_unit(watcher_unit_name(name), disable=True)
+
+
 def write_deploy_unit(name: str) -> None:
     """Write the systemd user unit that clones/builds/starts a site in the background.
 

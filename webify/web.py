@@ -249,6 +249,7 @@ def site_delete(name):
     daemon.stop_unit(daemon.http_unit_name(name), disable=True)
     daemon.stop_unit(daemon.tunnel_unit_name(name), disable=True)
     daemon.stop_unit(daemon.deploy_unit_name(name), disable=True)
+    daemon.stop_watcher_unit(name)
     daemon.remove_units(name)
     daemon.daemon_reload()
     import shutil
