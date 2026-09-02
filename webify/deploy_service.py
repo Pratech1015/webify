@@ -34,18 +34,20 @@ def deploy(name: str):
     try:
         new_info = svc.start(info.get("repo"), port)
     except Exception as exc:
-        # Any failure (WebifyError, CalledProcessError, ...) -> record a clean
-        # "failed" state so the dashboard shows the error and the service stays
-        # DISABLED (nothing running) for the user to fix and redeploy.
+        # Build failed: write a safe, disabled placeholder unit so 'webify start'
+        # doesn't throw "unit not found", then record the failure.
+        try:
+            svc.start_no_build(info.get("repo"), port)
+        except Exception:
+            pass # If start_no_build fails (e.g. clone failed), we have no unit.
+
         state.save_service(name, {
             **info,
             "deploy_status": "failed",
             "deploy_error": str(exc),
             "url": svc.url(),
         })
-        if isinstance(exc, WebifyError):
-            raise
-        raise WebifyError(str(exc)) from exc
+        raise
 
     state.save_service(name, {**info, **new_info, "deploy_status": "ok", "deploy_error": ""})
     print(f"Deploy complete: {name} -> {new_info.get('url') or svc.url()}", flush=True)
