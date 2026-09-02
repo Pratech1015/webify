@@ -10,10 +10,18 @@ import subprocess
 from pathlib import Path
 
 from ..config import SERVICES_DIR
-from ..core import WebifyError, build_repo, clone_repo, detect_served_dir
+from ..core import (
+    WebifyError,
+    build_repo,
+    clone_repo,
+    detect_netlify_functions,
+    detect_served_dir,
+    find_free_port,
+)
 from .. import daemon
 from ..daemon import (
-    http_unit_name, tunnel_unit_name, unit_active, unit_pid, unit_status,
+    functions_unit_name, http_unit_name, tunnel_unit_name, unit_active,
+    unit_pid, unit_status,
 )
 
 
@@ -30,13 +38,24 @@ class BaseService:
     # ---- lifecycle (subclass hooks) ----
     def start(self, repo_url: str, port: int, **kw) -> dict:
         served = self.ensure_cloned(repo_url)
-        result = build_repo(served, port=port)
+
+        # Detect Netlify Functions up-front. If present, the app runs on an
+        # internal port and a gateway fronts the public port so that
+        # `/.netlify/functions/*` works on the same origin as the site.
+        funcs = detect_netlify_functions(
+            served,
+            build=_read_netlify_build(served),
+        )
+        has_functions = bool(funcs.get("functions"))
+        app_port = find_free_port(port + 1) if has_functions else port
+
+        result = build_repo(served, port=app_port)
         self.precheck(port, served)
 
         if result["mode"] == "static":
             # Static site — use http.server on the served directory.
             served = result["served"]
-            daemon.write_http_unit(self.name, served, port)
+            daemon.write_http_unit(self.name, served, app_port)
             daemon.daemon_reload()
             daemon.start_unit(http_unit_name(self.name))
             self.extra_after_start(port, served)
@@ -48,7 +67,7 @@ class BaseService:
         else:
             # Dev server / binary — run the command directly.
             command = result["command"]
-            detected_port = result.get("port") or port
+            detected_port = result.get("port") or app_port
             daemon.write_custom_unit(self.name, command, workdir=served, port=detected_port)
             daemon.daemon_reload()
             daemon.start_unit(http_unit_name(self.name))
@@ -57,6 +76,23 @@ class BaseService:
                 "dir": str(self.dir), "served": str(served),
                 "unit": http_unit_name(self.name),
                 "command": command,
+            }
+
+        if has_functions:
+            site_port = result.get("port") or app_port
+            site_url = f"http://127.0.0.1:{site_port}"
+            daemon.write_functions_unit(
+                self.name, port, funcs["dir"], site_port, site_url,
+            )
+            daemon.daemon_reload()
+            daemon.start_functions_unit(self.name)
+            info = {
+                **info,
+                "port": port,
+                "functions_gateway": True,
+                "functions_port": port,
+                "site_port": site_port,
+                "netlify_functions": funcs.get("functions"),
             }
 
         return info
@@ -83,6 +119,7 @@ class BaseService:
     def stop(self) -> bool:
         running = unit_active(http_unit_name(self.name))
         daemon.stop_unit(http_unit_name(self.name))
+        daemon.stop_functions_unit(self.name)
         self.extra_after_stop()
         return running
 
@@ -90,7 +127,10 @@ class BaseService:
         pass
 
     def status(self) -> str:
-        return unit_status(http_unit_name(self.name))
+        base = unit_status(http_unit_name(self.name))
+        if daemon.unit_active(functions_unit_name(self.name)):
+            return f"{base}, functions gateway"
+        return base
 
     def url(self) -> str:
         return f"http://localhost:{_port(self)}"
@@ -220,6 +260,19 @@ def _require(binary: str) -> str:
             f"'{binary}' is required for this mode but was not found on PATH."
         )
     return path
+
+
+def _read_netlify_build(repo_dir: Path) -> dict:
+    """Read the ``build`` section of netlify.toml, or an empty dict."""
+    toml_path = repo_dir / "netlify.toml"
+    if not toml_path.exists():
+        return {}
+    try:
+        import toml
+        config = toml.load(toml_path)
+        return config.get("build", {}) or {}
+    except Exception:
+        return {}
 
 
 def _test_and_reload(nginx: str):

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "webify"
-version = "0.2.15"
+version = "0.3.0"
 description = "Webify — a self-hosted Netlify alternative for Linux. Deploy static sites from Git repos with one command."
 readme = "README.md"
 requires-python = ">=3.8"
@@ -23,9 +23,9 @@ dependencies = ["toml"]
 web = ["flask>=2.0", "waitress>=2.0"]
 
 [project.urls]
-Homepage = "https://github.com/webify/webify"
-Repository = "https://github.com/webify/webify"
-"Bug Tracker" = "https://github.com/webify/webify/issues"
+Homepage = "https://github.com/Pratech1015/webify"
+Repository = "https://github.com/Pratech1015/webify"
+"Bug Tracker" = "https://github.com/Pratech1015/webify/issues"
 
 [project.scripts]
 webify = "webify.cli:main"
@@ -34,6 +34,6 @@ webify = "webify.cli:main"
 packages = ["webify", "webify.services"]
 
 [tool.setuptools.package-data]
-webify = ["templates/*.html", "static/*"]
+webify = ["templates/*.html", "static/*", "*.js"]
 
 

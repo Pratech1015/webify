@@ -2,17 +2,26 @@
 
 **A self-hosted Netlify alternative for Linux.**
 
-Webify deploys static sites straight from a Git repository and serves them
-behind a `python http.server` on your own machine — no cloud, no vendor lock-in.
-Each deployed site runs as its own **systemd user service**, so it gets automatic
-restart, PID tracking, logging, and start-on-login out of the box.
+Webify deploys sites straight from a Git repository and serves them on your own
+machine — no cloud, no vendor lock-in. Each deployed site runs as its own
+**systemd user service**, so it gets automatic restart, PID tracking, logging,
+and start-on-login out of the box.
 
 ```
 $ webify create catalyst
-Enter Repo link: https://github.com/repo.git
-Do you want to use custom Port (Y/N) N
-✓ Service catalyst started on PID 9999 at port 7070
-   URL: http://localhost:7070
+Creating service 'catalyst'
+Enter Repo link: https://github.com/acme/catalyst.git
+Enter Repo link again: https://github.com/acme/catalyst.git
+Available modes:
+  🌐 local       localhost only
+  ☁️  cloudflared public URL via Cloudflare (requires cloudflared)
+  🚀 nginx       behind nginx reverse proxy (requires nginx + root)
+Select mode [local] local
+Use custom Port (Y/N) [N]
+Deploying https://github.com/acme/catalyst.git → catalyst (port 7070) in the background …
+✓ Service catalyst registered on port 7070. Deploy running in background.
+  Watch progress with: webify logs catalyst
+  Or check status with:    webify status catalyst
 ```
 
 ## Quick start (non-interactive)
@@ -25,7 +34,6 @@ webify create my-site --repo https://github.com/you/site.git
 webify create api --repo https://github.com/you/site.git --port 9000 --mode local
 webify create blog --repo https://github.com/you/blog.git --mode cloudflared
 ```
-
 If you pass no flags, Webify asks you interactively.
 
 ## Installation
@@ -36,7 +44,7 @@ installer that auto-detects your distro.
 **One-line installer (auto-detects your distro):**
 
 ```bash
-curl -fsSL https://github.com/webify/webify/raw/main/install.sh | bash
+curl -fsSL https://github.com/Pratech1015/webify/raw/main/install.sh | bash
 ```
 
 **Arch / EndeavourOS / Manjaro** — official AUR-style package (built & verified):
@@ -98,7 +106,36 @@ Served at `http://webify-<name>.localhost`.
 
 > `nginx` mode needs root to write `/etc/nginx/conf.d`. Run `sudo webify create ...`.
 
-## Commands
+## Netlify Functions (serverless at home)
+
+Netlify sites often ship a `netlify/functions/` directory — serverless handlers
+served at `/.netlify/functions/<name>`. Webify **understands and runs them**, so
+a self-hosted app keeps working even if its frontend calls `/.netlify/functions/*`
+on the same origin.
+
+When Webify finds a `netlify/functions` directory (or the `build.functions` path
+from `netlify.toml`), it launches a **Netlify-compatible gateway** in front of
+the app:
+
+```
+Browser ──> webify-<name>-functions.service (gateway, PUBLIC port)
+                 ├─ /.netlify/functions/*   -> invokes the real handler
+                 └─ everything else         -> proxied to the app (internal port)
+```
+
+* Handlers use the standard Netlify / Lambda signature
+  `exports.handler = async (event, context) => ({ statusCode, headers, body })`.
+  CommonJS (`.js`/`.cjs`) and ESM (`.mjs`) are both supported.
+* The frontend's `/.netlify/functions/api?action=whatever` calls hit the gateway
+  on the **same URL as the site** — no frontend changes needed.
+* The gateway runs as `webify-<name>-functions.service`, requires Node.js, and
+  reverse-proxies all non-function traffic to the real app on an internal port.
+* `webify status <name>` and the dashboard list the detected functions.
+
+```bash
+webify create prismtv --repo https://github.com/you/prismtv.git --mode cloudflared
+# / .netlify/functions/api now resolves on the deployed site
+```
 
 ```bash
 webify create <name> [--repo URL] [--port N] [--mode MODE]  # register + trigger a deploy

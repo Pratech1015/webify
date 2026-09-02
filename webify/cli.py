@@ -233,6 +233,7 @@ def cmd_kill(args):
         _e(str(exc)); sys.exit(1)
     daemon.stop_unit(daemon.http_unit_name(args.name), disable=True)
     daemon.stop_unit(daemon.tunnel_unit_name(args.name), disable=True)
+    daemon.stop_functions_unit(args.name)
     if "running" in svc.status():
         _e(f"Service {args.name} still has active units.")
         sys.exit(1)
@@ -306,6 +307,11 @@ def cmd_status(args):
     print(f"  url    : {svc.url()}")
     print(f"  repo   : {info.get('repo')}")
     print(f"  port   : {info.get('port')}")
+    funcs = info.get("netlify_functions")
+    if funcs:
+        print(f"  netlify functions : {', '.join(funcs)}")
+        if info.get("site_port"):
+            print(f"  site (internal)   : port {info.get('site_port')} behind the functions gateway")
     print(f"  unit   : {info.get('unit')}")
     print(f"  dir    : {info.get('dir')}")
 
@@ -360,6 +366,7 @@ def cmd_remove(args):
     daemon.stop_unit(daemon.http_unit_name(args.name), disable=True)
     daemon.stop_unit(daemon.tunnel_unit_name(args.name), disable=True)
     daemon.stop_unit(daemon.deploy_unit_name(args.name), disable=True)
+    daemon.stop_functions_unit(args.name)
     daemon.stop_unit(daemon.watcher_unit_name(args.name), disable=True)
     daemon.remove_units(args.name)
     daemon.daemon_reload()

@@ -5,7 +5,7 @@
 # Fedora/RHEL, and falls back to a venv install elsewhere.
 #
 # Usage:
-#   curl -fsSL https://github.com/webify/webify/raw/main/install.sh | bash
+#   curl -fsSL https://github.com/Pratech1015/webify/raw/main/install.sh | bash
 #   # or from a checkout:
 #   ./install.sh
 

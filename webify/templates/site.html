@@ -35,6 +35,11 @@
   <div style="flex:1;min-width:200px">
     <div style="font-size:12px;color:#556677;margin-bottom:4px">Mode</div>
     <span style="font-size:14px">{{ site.mode }}</span>
+    {% if site.netlify_functions %}
+      <div style="margin-top:6px;display:inline-block;padding:2px 8px;background:rgba(46,204,113,.1);border:1px solid rgba(46,204,113,.35);border-radius:999px;font-size:11px;color:#2ecc71">
+        Netlify Functions: {{ site.netlify_functions|join(', ') }}
+      </div>
+    {% endif %}
   </div>
 </div>
 

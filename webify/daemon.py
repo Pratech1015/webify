@@ -55,6 +55,10 @@ def watcher_unit_name(name: str) -> str:
     return f"webify-{name}-watcher.service"
 
 
+def functions_unit_name(name: str) -> str:
+    return f"webify-{name}-functions.service"
+
+
 def write_watcher_unit(name: str) -> None:
     """Write systemd unit for background repo watcher."""
     python = _python_bin()
@@ -208,7 +212,7 @@ WantedBy=default.target
 
 
 def remove_units(name: str) -> None:
-    for unit in (http_unit_name(name), tunnel_unit_name(name), deploy_unit_name(name), watcher_unit_name(name)):
+    for unit in (http_unit_name(name), tunnel_unit_name(name), deploy_unit_name(name), watcher_unit_name(name), functions_unit_name(name)):
         p = _unit_dir() / unit
         if p.exists():
             p.unlink()
@@ -216,7 +220,7 @@ def remove_units(name: str) -> None:
 
 def rename_units(old_name: str, new_name: str) -> None:
     """Rename systemd unit files from old_name to new_name."""
-    for suffix in ("", "-tunnel", "-deploy", "-watcher"):
+    for suffix in ("", "-tunnel", "-deploy", "-watcher", "-functions"):
         old_path = _unit_dir() / f"webify-{old_name}{suffix}.service"
         new_path = _unit_dir() / f"webify-{new_name}{suffix}.service"
         if old_path.exists():
@@ -342,3 +346,42 @@ def start_tunnel_unit(name: str) -> None:
 
 def stop_tunnel_unit(name: str) -> None:
     stop_unit(tunnel_unit_name(name), disable=True)
+
+
+def write_functions_unit(name: str, gateway_port: int, function_dir: str, site_port: int, site_url: str) -> None:
+    """Write the netlify-functions gateway unit that fronts the site.
+
+    The gateway listens on ``gateway_port``, serves ``/.netlify/functions/*``
+    by invoking the handlers, and reverse-proxies everything else to the real
+    app (``site_url``) so the functions share the site's origin.
+    """
+    node = _which("node")
+    content = f"""# Managed by Webify — do not edit manually.
+[Unit]
+Description=Webify functions gateway for {name} (netlify-compatible)
+After=network.target {http_unit_name(name)}
+Requires={http_unit_name(name)}
+
+[Service]
+Type=simple
+Environment=WEBIFY_BIND=0.0.0.0
+Environment=WEBIFY_FUNCTIONS_PORT={gateway_port}
+Environment=WEBIFY_FUNCTION_DIR={function_dir}
+Environment=WEBIFY_SITE_URL={site_url}
+Environment=PORT={gateway_port}
+ExecStart={node} {Path(__file__).parent / "functions_server.js"}
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target
+"""
+    _write_unit(_unit_dir() / functions_unit_name(name), content)
+
+
+def start_functions_unit(name: str) -> None:
+    start_unit(functions_unit_name(name), enable=False)
+
+
+def stop_functions_unit(name: str) -> None:
+    stop_unit(functions_unit_name(name), disable=True)

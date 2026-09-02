@@ -63,6 +63,51 @@ def find_free_port(preferred: int = DEFAULT_PORT) -> int:
     raise WebifyError("No free port available on this system.")
 
 
+DEFAULT_FUNCTIONS_DIRS = ("netlify/functions", "functions")
+
+
+def detect_netlify_functions(repo_dir: Path, build: dict = None) -> dict:
+    """Locate Netlify Functions and return an inventory for the gateway runtime.
+
+    Netlify serves each file in the functions directory as
+    ``/.netlify/functions/<basename>``. The default location is
+    ``netlify/functions`` (or ``functions``), overridable via the
+    ``build.functions`` key in ``netlify.toml``.
+
+    Return a dict with:
+      - ``dir``: absolute path of the functions directory (or None)
+      - ``functions``: list of function names (file basenames, extension stripped)
+      - ``files``: list of absolute paths to each function file
+    """
+    func_dir = None
+    if build and build.get("functions"):
+        candidate = repo_dir / str(build["functions"])
+        if candidate.is_dir():
+            func_dir = candidate
+    if func_dir is None:
+        for rel in DEFAULT_FUNCTIONS_DIRS:
+            candidate = repo_dir / rel
+            if candidate.is_dir():
+                func_dir = candidate
+                break
+    if func_dir is None:
+        return {"dir": None, "functions": [], "files": []}
+
+    files = []
+    for p in sorted(func_dir.iterdir()):
+        if not p.is_file():
+            continue
+        if p.suffix.lower() in (".js", ".mjs", ".cjs", ".ts"):
+            files.append(p)
+    functions = []
+    for p in files:
+        name = p.stem
+        if p.suffix.lower() == ".ts" and name.endswith((".d",)):
+            continue
+        functions.append(name)
+    return {"dir": str(func_dir), "functions": functions, "files": [str(p) for p in files]}
+
+
 def detect_served_dir(repo_dir: Path) -> Path:
     """Figure out which subdirectory to serve (supports classic static layouts).
 
@@ -83,79 +128,66 @@ def build_repo(repo_dir: Path, port: int = 7070) -> dict:
     """Detect project type, install deps, build if needed.
     ...
     """
-    # 1. Look for netlify.toml first
+    # netlify.toml drives the build (Netlify-compatible deployment).
     toml_path = repo_dir / "netlify.toml"
+    build = {}
     if toml_path.exists():
         import toml
-        config = toml.load(toml_path)
-        build = config.get("build", {})
-        
-        # Parse environment
-        env = build.get("environment", {})
-        
-        if "command" in build:
-            # Handle build command
-            print(f"  Running netlify build command: {build['command']}", flush=True)
-            import subprocess, os
-            os_env = {**os.environ, **env, "PORT": str(port)}
-            proc = subprocess.run(build["command"].split(), cwd=repo_dir, env=os_env, check=False)
-            if proc.returncode != 0:
-                raise WebifyError(f"Build command '{build['command']}' failed.")
-                
-            # If it's a node project, look for start
-            if (repo_dir / "package.json").exists():
-                scripts = _npm_scripts(repo_dir)
-                if "start" in scripts:
-                    return {
-                        "mode": "server", 
-                        "command": "npm run start", 
-                        "port": port,
-                        "env": env
-                    }
-            
-            # Static site
-            return {"mode": "static", "served": repo_dir / build.get("publish", "."), "port": port}
+        build = toml.load(toml_path).get("build", {})
 
-    # Fallback to existing detection
-    # 1. Look for netlify.toml first
-    toml_path = repo_dir / "netlify.toml"
-    if toml_path.exists():
-        import toml
-        config = toml.load(toml_path)
-        build = config.get("build", {})
-        
-        # Parse environment
+    # Functions runtime: locate netlify/functions (or build.functions from toml).
+    funcs = detect_netlify_functions(repo_dir, build)
+    functions_meta = {
+        "netlify_functions": {
+            "dir": funcs["dir"],
+            "functions": funcs["functions"],
+        }
+    }
+
+    if "command" in build:
         env = build.get("environment", {})
-        
-        if "command" in build:
-            # Handle build command
-            print(f"  Running netlify build command: {build['command']}", flush=True)
-            import subprocess, os
-            os_env = {**os.environ, **env, "PORT": str(port)}
-            # Simple split might fail on complex commands; use shell=True if needed
-            proc = subprocess.run(build["command"], shell=True, cwd=repo_dir, env=os_env, check=False)
-            if proc.returncode != 0:
-                raise WebifyError(f"Build command '{build['command']}' failed.")
-                
-            # If it's a node project, look for start
-            if (repo_dir / "package.json").exists():
-                scripts = _npm_scripts(repo_dir)
-                if "start" in scripts:
-                    return {
-                        "mode": "server", 
-                        "command": "npm run start", 
-                        "port": port
-                    }
-            
-            # Static site
-            return {"mode": "static", "served": repo_dir / build.get("publish", "."), "port": port}
+        print(f"  Running netlify build command: {build['command']}", flush=True)
+        import subprocess, os
+        os_env = {**os.environ, **env, "PORT": str(port)}
+        proc = subprocess.run(build["command"], shell=True, cwd=repo_dir, env=os_env, check=False)
+        if proc.returncode != 0:
+            raise WebifyError(f"Build command '{build['command']}' failed.")
+
+        # If it's a node project, look for start
+        if (repo_dir / "package.json").exists():
+            scripts = _npm_scripts(repo_dir)
+            if "start" in scripts:
+                return {
+                    "mode": "server",
+                    "command": "npm run start",
+                    "port": port,
+                    "env": env,
+                    **functions_meta,
+                }
+
+        # Static site
+        return {
+            "mode": "static",
+            "served": repo_dir / build.get("publish", "."),
+            "port": port,
+            **functions_meta,
+        }
 
     project = detect_project_type(repo_dir)
-    # ... rest of the original logic ...
     if project["type"] == "node":
-        return _handle_node(repo_dir, project, port)
-    # ...
+        return {**_handle_node(repo_dir, project, port), **functions_meta}
+    if project["type"] == "make":
+        return {**_handle_make(repo_dir), **functions_meta}
+    if project["type"] == "cargo":
+        return {**_handle_cargo(repo_dir, port), **functions_meta}
+    if project["type"] == "go":
+        return {**_handle_go(repo_dir, port), **functions_meta}
+    return {**_handle_unknown(repo_dir, port), **functions_meta}
 
+
+def _handle_unknown(repo_dir: Path, port: int = 7070) -> dict:
+    """Fallback for unrecognized projects — serve whatever is present."""
+    return {"mode": "static", "served": detect_served_dir(repo_dir), "port": port}
 
 
 def detect_project_type(repo_dir: Path) -> dict:
