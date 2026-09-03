@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "webify"
-version = "0.4.0"
+version = "0.3.1"
 description = "Webify — a self-hosted Netlify alternative for Linux. Deploy static sites from Git repos with one command."
 readme = "README.md"
 requires-python = ">=3.8"
