@@ -54,11 +54,15 @@ cd packaging/aur && make install      # builds a webify-*.pkg.tar.zst with makep
 # or via an AUR helper once published:  yay -S webify
 ```
 
-**Debian / Ubuntu** — native `.deb`:
+**Debian / Ubuntu** — native `.deb` (or the signed APT repo):
 
 ```bash
+# Option A — build it locally
 make package-deb                      # requires dpkg-buildpackage, debhelper
 sudo dpkg -i packaging/dist/webify_*.deb
+
+# Option B — use the official signed APT repo (simplest, auto-upgrades)
+curl -fsSL https://raw.githubusercontent.com/Pratech1015/webify/main/setup-apt.sh | sudo bash
 ```
 
 **Fedora / RHEL / Rocky** — native `.rpm`:

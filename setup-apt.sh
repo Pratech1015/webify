@@ -16,13 +16,22 @@ die()  { printf '\033[31merror:\033[0m %s\n' "$*" >&2; exit 1; }
 
 REPO_URL="https://raw.githubusercontent.com/Pratech1015/webify/main"
 SOURCES_FILE="/etc/apt/sources.list.d/webify.list"
+KEYRING="/usr/share/keyrings/webify-apt-keyring.gpg"
+
+# Install the public signing key so apt can verify the repo.
+info "Installing Webify APT signing key..."
+curl -fsSL "${REPO_URL}/repo/webify-apt-key.asc" -o /tmp/webify-apt-key.asc
+gpg --dearmor --yes -o "$KEYRING" /tmp/webify-apt-key.asc
+rm -f /tmp/webify-apt-key.asc
+chmod 644 "$KEYRING"
+ok "Key installed to ${KEYRING}"
 
 # Write the source list
 info "Adding Webify APT repository..."
 cat > "$SOURCES_FILE" <<SOURCES
 # Webify — self-hosted Netlify alternative
-# Flat repo: fetches exactly one Packages index (no dists/ probing).
-deb [trusted=yes] ${REPO_URL}/repo ./
+# Signed flat repo: fetches exactly one verified Packages index.
+deb [signed-by=${KEYRING}] ${REPO_URL}/repo ./
 SOURCES
 ok "Repository added to ${SOURCES_FILE}"
 

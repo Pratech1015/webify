@@ -1,0 +1,31 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+Origin: Webify
+Label: Webify
+Suite: stable
+Codename: stable
+Date: Thu, 03 Sep 2026 11:36:01 +0000
+Architectures: all amd64
+Components: main
+Description: Webify apt repository
+SHA256:
+ d164f50a282f6ed111484d504452a3ba8b74e466a81cbbf030f7157a82189215 652 Packages
+ e94ca1770b5f217aef1170a26c90f8c63507208c861597f4899c79298296dd8a 470 Packages.gz
+
+-----BEGIN PGP SIGNATURE-----
+
+iQIzBAEBCgAdFiEEykKQZBUwmPoHGsffDR6MeWg8AcMFAmqZW6EACgkQDR6MeWg8
+AcM1pRAAjDaAt8A9SGp9nbTjpqL/7MKcH38n3zMFSzNS6g3o9i5aXM4OM5NnpaTa
+OrXQ/A+545OAPTHkyNvYVSYJUyCU58za//p7Kr5EV1DbgTuQT9ORYdsD5BifFrWK
+Y85JCUJXUSc0tBCRUrSq9vTwVfd/pQYmvKmioXuJe8zDBik118xnc9ZMQI7M7KBZ
+TAqx1WhhnpGpRFQAERL+PktgaMsa45QeJBimUsgRratDazptgifIjqEBHYbdZcG5
+5zbyw9tiR2VzTWw8KmhL98lRRl5aDjJriQf8uRfuq+U1cUGUvuIDfvXwbmJMTA23
+ub3yr91pe5hFam6/wrt2lEThgAW//pbb/irQqFdudhMLXi+p9J3Ba1QBP8mSHGPP
+bqTqnyOQcwKuulIeddEv8fHROXYeVnVhnH5p9M5KmjDWOo+LcwPmeSt/sWPlA1f4
+2H61/pmuu/PNo0aErgiK3c/8l8utaCg5cxnz1iEu/UIzX0/arqjhaP0w7cMgVtWA
+714kH7V6K6K2r1iodes7fCN4bgjINJTJcP0Pjv9186E6dEXjoricfF2fUyJIJoBT
+AJrcZYiBwrits7FESIkQTrYewxFWPWTNxVyLN9RxN49N+BVtzdcnzmjQBObyl2Lm
+N/yrPvf6kn8tacag9ZsVHQ8udUaBESOVLTdIenuqGAczocU+z90=
+=8Tea
+-----END PGP SIGNATURE-----
