@@ -57,13 +57,18 @@ package-all:
 
 # -- Debian/Ubuntu (.deb) -----------------------------------------------------
 DEB_BUILD_DIR = packaging/dist
-DIST_DIR := $(DEB_BUILD_DIR)/webify-0.1.0
+VERSION := $(shell $(PYTHON) -c "from webify import __version__; print(__version__)")
+DIST_DIR := $(DEB_BUILD_DIR)/webify-$(VERSION)
 
 deb-stage: clean
 	$(PYTHON) -m build --sdist --outdir $(DEB_BUILD_DIR)
 	rm -rf $(DIST_DIR)
-	tar -xzf $(DEB_BUILD_DIR)/webify-0.1.0.tar.gz -C $(DEB_BUILD_DIR)
+	tar -xzf $(DEB_BUILD_DIR)/webify-$(VERSION).tar.gz -C $(DEB_BUILD_DIR)
 	cp -r packaging/debian $(DIST_DIR)/debian
+	@# Keep the debian changelog version in sync with the source version,
+	@# otherwise the .deb is versioned with the stale changelog version.
+	printf 'webify (%s-1) unstable; urgency=medium\n\n  * Release %s.\n\n -- Webify Contributors <webify@localhost>  %s\n' \
+		"$(VERSION)" "$(VERSION)" "$$(date -u -R)" > $(DIST_DIR)/debian/changelog
 
 package-deb: deb-stage
 	@echo "==> Building .deb (needs dpkg-buildpackage)"
