@@ -62,6 +62,7 @@ def _service_info(name: str) -> dict:
         "netlify_functions": info.get("netlify_functions") or [],
         "site_port": info.get("site_port"),
         "env": info.get("env") or {},
+        "domain": info.get("domain") or "",
     }
 
 
@@ -125,7 +126,7 @@ def new_site():
         port_raw = request.form.get("port", "").strip()
 
         if mode == "cloudflared" and not daemon.is_cloudflared_ready():
-            return render_template("new.html", error="Cloudflared is not configured (not logged in).")
+            return render_template("new.html", error="Cloudflared is not logged in or not installed. Deploy as local instead, or run 'cloudflared tunnel login' first.")
 
         if not name or not repo:
             return render_template("new.html", error="Name and repo URL are required.")
@@ -135,6 +136,7 @@ def new_site():
             return render_template("new.html", error=f"A service named '{name}' already exists.")
 
         port = int(port_raw) if port_raw and port_raw.isdigit() else find_free_port(DEFAULT_PORT)
+        domain = request.form.get("domain", "").strip()
 
         svc = build_service(name, mode)
         svc.dir.mkdir(parents=True, exist_ok=True)
@@ -147,6 +149,7 @@ def new_site():
             "repo": repo,
             "port": port,
             "dir": str(svc.dir),
+            "domain": domain,
         })
         try:
             _trigger_deploy(name)

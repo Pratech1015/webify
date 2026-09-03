@@ -197,27 +197,6 @@ WantedBy=default.target
     _write_unit(path, content)
 
 
-def write_tunnel_unit(name: str, port: int) -> None:
-    """Write a cloudflared quick-tunnel unit bound to the service's http port."""
-    cloudflared = _which("cloudflared")
-    content = f"""# Managed by Webify — do not edit manually.
-[Unit]
-Description=Webify tunnel for {name} (cloudflared)
-After=network.target {http_unit_name(name)}
-Requires={http_unit_name(name)}
-
-[Service]
-Type=simple
-ExecStart={cloudflared} tunnel --url http://localhost:{port} --no-autoupdate
-Restart=on-failure
-RestartSec=2
-
-[Install]
-WantedBy=default.target
-"""
-    _write_unit(_unit_dir() / tunnel_unit_name(name), content)
-
-
 def remove_units(name: str) -> None:
     for unit in (http_unit_name(name), tunnel_unit_name(name), deploy_unit_name(name), watcher_unit_name(name), functions_unit_name(name)):
         p = _unit_dir() / unit
@@ -319,19 +298,89 @@ def parse_status_name(name: str) -> str:
 
 
 def is_cloudflared_ready() -> bool:
-    """Check if cloudflared is installed and configured."""
+    """Check if cloudflared is installed and logged in."""
     try:
-        # 'cloudflared tunnel list' fails if not logged in
         subprocess.run(["cloudflared", "tunnel", "list"], capture_output=True, check=True)
         return True
     except (subprocess.CalledProcessError, FileNotFoundError):
         return False
 
 
+def cloudflared_tunnel_exists(tunnel_name: str) -> bool:
+    """Check if a named tunnel already exists."""
+    try:
+        proc = subprocess.run(
+            ["cloudflared", "tunnel", "list"],
+            capture_output=True, text=True, timeout=10,
+        )
+        return tunnel_name in proc.stdout
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        return False
+
+
+def cloudflared_tunnel_create(tunnel_name: str) -> str:
+    """Create a cloudflared tunnel. Returns the tunnel ID."""
+    proc = subprocess.run(
+        ["cloudflared", "tunnel", "create", tunnel_name],
+        capture_output=True, text=True, timeout=30,
+    )
+    if proc.returncode != 0:
+        raise WebifyError(f"Failed to create tunnel '{tunnel_name}':\n{proc.stderr.strip()}")
+    # Extract tunnel ID from output like "Created tunnel prismtv with id 24c355c0-..."
+    import re
+    m = re.search(r"id\s+([0-9a-f-]+)", proc.stdout)
+    if not m:
+        raise WebifyError(f"Created tunnel but could not parse ID from output:\n{proc.stdout}")
+    return m.group(1)
+
+
+def cloudflared_write_config(tunnel_name: str, tunnel_id: str) -> Path:
+    """Write ~/.cloudflared/config.yml for the named tunnel."""
+    cf_dir = Path.home() / ".cloudflared"
+    cf_dir.mkdir(parents=True, exist_ok=True)
+    config_path = cf_dir / "config.yml"
+    cred_file = cf_dir / f"{tunnel_id}.json"
+    content = f"""tunnel: {tunnel_id}
+credentials-file: {cred_file}
+
+ingress:
+  - hostname: placeholder
+    service: http_status:404
+  - service: http_status:404
+"""
+    config_path.write_text(content)
+    return config_path
+
+
+def cloudflared_route_dns(tunnel_name: str, domain: str) -> None:
+    """Route DNS for a cloudflared tunnel."""
+    proc = subprocess.run(
+        ["cloudflared", "tunnel", "route", "dns", tunnel_name, domain],
+        capture_output=True, text=True, timeout=30,
+    )
+    if proc.returncode != 0 and "already exists" not in proc.stderr:
+        raise WebifyError(f"Failed to route DNS for '{domain}':\n{proc.stderr.strip()}")
+
+
+def cloudflared_update_config_ingress(domain: str, local_port: int) -> None:
+    """Update config.yml with the correct hostname ingress rule."""
+    config_path = Path.home() / ".cloudflared" / "config.yml"
+    if not config_path.exists():
+        return
+    content = config_path.read_text()
+    import re
+    # Replace the placeholder hostname with the actual domain
+    content = content.replace("hostname: placeholder", f"hostname: {domain}")
+    # Update the service to point to the local port
+    content = content.replace("service: http_status:404", f"service: http://localhost:{local_port}", 1)
+    config_path.write_text(content)
+
+
 def write_tunnel_unit(name: str, tunnel_name: str) -> None:
     """Write systemd unit for persistent cloudflared tunnel."""
     config = Path.home() / ".cloudflared" / "config.yml"
-    content = f"""[Unit]
+    content = f"""# Managed by Webify — do not edit manually.
+[Unit]
 Description=Webify tunnel for {name}
 After=network.target webify-{name}.service
 Requires=webify-{name}.service

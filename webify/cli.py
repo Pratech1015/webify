@@ -120,16 +120,23 @@ def cmd_create(args):
     # Check cloudflared
     if mode == "cloudflared" and not daemon.is_cloudflared_ready():
         if interactive:
-            print(f"{YELLOW}Warning: Cloudflared is not configured.{RESET}")
-            choice = _input("Continue as local mode instead? [Y/n]").lower()
+            print(f"{YELLOW}Cloudflared is not logged in or not installed.{RESET}")
+            choice = _input("Deploy as local instead? [Y/n]").lower()
             if choice != 'n':
                 mode = 'local'
             else:
                 _e("Cloudflared mode cancelled.")
                 sys.exit(1)
         else:
-            _e("Cloudflared is not configured.")
+            _e("Cloudflared is not logged in or not installed.")
             sys.exit(1)
+
+    # Ask for domain if cloudflared mode
+    domain = ""
+    if mode == "cloudflared" and interactive:
+        domain = _input("Enter domain (e.g. tv.example.com)") or ""
+        if not domain:
+            print(f"{YELLOW}No domain provided. Tunnel will be created without DNS routing.{RESET}")
 
     if not port:
         port = _port_for(port, interactive=interactive)
@@ -144,6 +151,7 @@ def cmd_create(args):
         "repo": repo,
         "port": port,
         "dir": str(svc.dir),
+        "domain": domain,
     })
 
     _info(f"Deploying {repo} → {name} (port {port}) in the background …")
