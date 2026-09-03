@@ -65,6 +65,21 @@ sudo dpkg -i packaging/dist/webify_*.deb
 curl -fsSL https://raw.githubusercontent.com/Pratech1015/webify/main/setup-apt.sh | sudo bash
 ```
 
+> If you already have the unsigned repo configured, you'll see
+> `OpenPGP signature verification failed: ... NO_PUBKEY`. Fix it in two steps:
+>
+> ```bash
+> # 1. Install the signing key
+> curl -fsSL https://raw.githubusercontent.com/Pratech1015/webify/main/repo/webify-apt-key.asc \
+>   | sudo gpg --dearmor -o /usr/share/keyrings/webify-apt-keyring.gpg
+> # 2. Update the sources line to use [signed-by=...]
+> sudo tee /etc/apt/sources.list.d/webify.list >/dev/null <<'EOF'
+> deb [signed-by=/usr/share/keyrings/webify-apt-keyring.gpg] https://raw.githubusercontent.com/Pratech1015/webify/main/repo ./
+> EOF
+> ```
+>
+> Then run `sudo apt update && sudo apt upgrade webify`.
+
 **Fedora / RHEL / Rocky** — native `.rpm`:
 
 ```bash
