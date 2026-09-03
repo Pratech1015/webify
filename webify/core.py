@@ -146,6 +146,9 @@ def build_repo(repo_dir: Path, port: int = 7070, user_env: dict = None) -> dict:
 
     if "command" in build:
         toml_env = build.get("environment", {})
+        # Install dependencies first if package.json exists
+        if (repo_dir / "package.json").exists():
+            _npm_install(repo_dir)
         print(f"  Running netlify build command: {build['command']}", flush=True)
         import subprocess, os
         merged = {**os.environ, **(toml_env or {}), **(user_env or {}), "PORT": str(port)}
