@@ -101,6 +101,7 @@ class BaseService:
             site_url = f"http://127.0.0.1:{site_port}"
             daemon.write_functions_unit(
                 self.name, port, funcs["dir"], site_port, site_url,
+                env=user_env,
             )
             daemon.daemon_reload()
             daemon.start_functions_unit(self.name)

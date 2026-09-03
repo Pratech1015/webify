@@ -404,7 +404,7 @@ def stop_tunnel_unit(name: str) -> None:
     stop_unit(tunnel_unit_name(name), disable=True)
 
 
-def write_functions_unit(name: str, gateway_port: int, function_dir: str, site_port: int, site_url: str) -> None:
+def write_functions_unit(name: str, gateway_port: int, function_dir: str, site_port: int, site_url: str, env: dict = None) -> None:
     """Write the netlify-functions gateway unit that fronts the site.
 
     The gateway listens on ``gateway_port``, serves ``/.netlify/functions/*``
@@ -412,6 +412,12 @@ def write_functions_unit(name: str, gateway_port: int, function_dir: str, site_p
     app (``site_url``) so the functions share the site's origin.
     """
     node = _which("node")
+    env_lines = []
+    if env:
+        for k, v in env.items():
+            val = str(v).replace('"', '\\"')
+            env_lines.append(f'Environment="{k}={val}"')
+    env_block = "\n".join(env_lines)
     content = f"""# Managed by Webify — do not edit manually.
 [Unit]
 Description=Webify functions gateway for {name} (netlify-compatible)
@@ -425,6 +431,7 @@ Environment=WEBIFY_FUNCTIONS_PORT={gateway_port}
 Environment=WEBIFY_FUNCTION_DIR={function_dir}
 Environment=WEBIFY_SITE_URL={site_url}
 Environment=PORT={gateway_port}
+{env_block}
 ExecStart={node} {Path(__file__).parent / "functions_server.js"}
 Restart=on-failure
 RestartSec=2
