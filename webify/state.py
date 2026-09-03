@@ -44,6 +44,17 @@ def get_service(name: str) -> Optional[Dict]:
     return _load()["services"].get(name)
 
 
+def update_service(name: str, fields: Dict) -> None:
+    """Merge *fields* into the existing state for *name*."""
+    state = _load()
+    svc = state["services"].get(name)
+    if svc is None:
+        return
+    svc.update(fields)
+    state["services"][name] = svc
+    _save(state)
+
+
 def list_services() -> List[Dict]:
     services = _load()["services"]
     return [

@@ -124,7 +124,7 @@ def detect_served_dir(repo_dir: Path) -> Path:
     return repo_dir
 
 
-def build_repo(repo_dir: Path, port: int = 7070) -> dict:
+def build_repo(repo_dir: Path, port: int = 7070, user_env: dict = None) -> dict:
     """Detect project type, install deps, build if needed.
     ...
     """
@@ -145,11 +145,11 @@ def build_repo(repo_dir: Path, port: int = 7070) -> dict:
     }
 
     if "command" in build:
-        env = build.get("environment", {})
+        toml_env = build.get("environment", {})
         print(f"  Running netlify build command: {build['command']}", flush=True)
         import subprocess, os
-        os_env = {**os.environ, **env, "PORT": str(port)}
-        proc = subprocess.run(build["command"], shell=True, cwd=repo_dir, env=os_env, check=False)
+        merged = {**os.environ, **(toml_env or {}), **(user_env or {}), "PORT": str(port)}
+        proc = subprocess.run(build["command"], shell=True, cwd=repo_dir, env=merged, check=False)
         if proc.returncode != 0:
             raise WebifyError(f"Build command '{build['command']}' failed.")
 
@@ -161,7 +161,7 @@ def build_repo(repo_dir: Path, port: int = 7070) -> dict:
                     "mode": "server",
                     "command": "npm run start",
                     "port": port,
-                    "env": env,
+                    "env": toml_env,
                     **functions_meta,
                 }
 
@@ -382,3 +382,40 @@ def is_systemd_user_available() -> bool:
         return bool(out) and "System has not been booted" not in out
     except (FileNotFoundError, subprocess.TimeoutExpired):
         return False
+
+
+def write_env_file(repo_dir: Path, env: dict) -> None:
+    """Write a .env file to repo_dir from a dict of key=value pairs."""
+    if not env:
+        return
+    lines = []
+    for k, v in env.items():
+        # Shell-safe quoting: wrap values with spaces or special chars in quotes
+        val = str(v)
+        if any(c in val for c in " \t\"'\\$`"):
+            val = '"' + val.replace("\\", "\\\\").replace('"', '\\"') + '"'
+        lines.append(f"{k}={val}")
+    (repo_dir / ".env").write_text("\n".join(lines) + "\n")
+
+
+def parse_env_file(repo_dir: Path) -> dict:
+    """Parse a .env file into a dict. Handles KEY=VALUE and KEY='value'."""
+    env = {}
+    env_path = repo_dir / ".env"
+    if not env_path.exists():
+        return env
+    for line in env_path.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if "=" not in line:
+            continue
+        key, _, val = line.partition("=")
+        key = key.strip()
+        val = val.strip()
+        if val.startswith('"') and val.endswith('"'):
+            val = val[1:-1].replace('\\"', '"').replace("\\\\", "\\")
+        elif val.startswith("'") and val.endswith("'"):
+            val = val[1:-1]
+        env[key] = val
+    return env

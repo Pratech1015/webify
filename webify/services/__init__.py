@@ -17,6 +17,8 @@ from ..core import (
     detect_netlify_functions,
     detect_served_dir,
     find_free_port,
+    parse_env_file,
+    write_env_file,
 )
 from .. import daemon
 from ..daemon import (
@@ -39,6 +41,20 @@ class BaseService:
     def start(self, repo_url: str, port: int, **kw) -> dict:
         served = self.ensure_cloned(repo_url)
 
+        # Load env vars from state and write .env to repo dir.
+        from .. import state
+        svc_state = state.get_service(self.name) or {}
+        user_env = svc_state.get("env") or {}
+        write_env_file(served, user_env)
+        # Also add to .gitignore so .env is not committed.
+        gi = served / ".gitignore"
+        try:
+            existing = gi.read_text() if gi.exists() else ""
+            if ".env" not in existing:
+                gi.write_text(existing.rstrip() + "\n.env\n" if existing else ".env\n")
+        except OSError:
+            pass
+
         # Detect Netlify Functions up-front. If present, the app runs on an
         # internal port and a gateway fronts the public port so that
         # `/.netlify/functions/*` works on the same origin as the site.
@@ -49,7 +65,7 @@ class BaseService:
         has_functions = bool(funcs.get("functions"))
         app_port = find_free_port(port + 1) if has_functions else port
 
-        result = build_repo(served, port=app_port)
+        result = build_repo(served, port=app_port, user_env=user_env)
         self.precheck(port, served)
 
         if result["mode"] == "static":
@@ -63,12 +79,13 @@ class BaseService:
                 "mode": self.mode, "repo": repo_url, "port": port,
                 "dir": str(self.dir), "served": str(served),
                 "unit": http_unit_name(self.name),
+                "env": user_env,
             }
         else:
             # Dev server / binary — run the command directly.
             command = result["command"]
             detected_port = result.get("port") or app_port
-            daemon.write_custom_unit(self.name, command, workdir=served, port=detected_port)
+            daemon.write_custom_unit(self.name, command, workdir=served, port=detected_port, env=user_env)
             daemon.daemon_reload()
             daemon.start_unit(http_unit_name(self.name))
             info = {
@@ -76,6 +93,7 @@ class BaseService:
                 "dir": str(self.dir), "served": str(served),
                 "unit": http_unit_name(self.name),
                 "command": command,
+                "env": user_env,
             }
 
         if has_functions:
@@ -103,10 +121,13 @@ class BaseService:
         served = detect_served_dir(served)
         daemon.write_http_unit(self.name, served, port)
         daemon.daemon_reload()
+        from .. import state
+        svc_state = state.get_service(self.name) or {}
         info = {
             "mode": self.mode, "repo": repo_url, "port": port,
             "dir": str(self.dir), "served": str(served),
             "unit": http_unit_name(self.name),
+            "env": svc_state.get("env") or {},
         }
         return info
 

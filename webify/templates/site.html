@@ -90,7 +90,24 @@
       </div>
       {% endif %}
 
-      <div style="margin-bottom:20px">
+      <div style="border-top:1px solid rgba(255,255,255,.07);padding-top:20px;margin-top:8px;margin-bottom:24px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:#e0e8f0">Environment variables</div>
+            <div style="font-size:11px;color:#556677;margin-top:2px">Injected as process env during build &amp; runtime (like Netlify)</div>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="addEnvRow()">+ Add</button>
+        </div>
+        <div id="env-list">
+          <div id="env-empty" style="font-size:12px;color:#556677;padding:8px 0">No variables set yet.</div>
+        </div>
+        <div id="env-save-bar" style="display:none;margin-top:12px">
+          <button class="btn btn-primary btn-sm" onclick="saveEnvVars()">Save variables</button>
+          <span id="env-save-status" style="font-size:11px;color:#2ecc71;margin-left:8px"></span>
+        </div>
+      </div>
+
+      <div style="border-top:1px solid rgba(255,255,255,.07);padding-top:20px;margin-top:8px">
         <label style="font-size:13px;font-weight:500;color:#8899aa;display:block;margin-bottom:6px">Rename site</label>
         <div style="display:flex;gap:8px">
           <input id="rename-input" type="text" value="{{ site.name }}" style="flex:1;padding:8px 12px;background:#0e1e25;border:1px solid rgba(255,255,255,.12);border-radius:6px;color:#fff;font-size:14px;outline:none">
@@ -195,6 +212,85 @@ function toast(msg, err) {
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 3000);
 }
+
+// ---- Environment Variables ----
+var envVars = {{ site.env | tojson }};
+
+function renderEnvVars() {
+  const list = document.getElementById('env-list');
+  const empty = document.getElementById('env-empty');
+  const bar = document.getElementById('env-save-bar');
+  const keys = Object.keys(envVars);
+  if (keys.length === 0) {
+    empty.style.display = '';
+    bar.style.display = 'none';
+    list.querySelectorAll('.env-row').forEach(r => r.remove());
+    return;
+  }
+  empty.style.display = 'none';
+  bar.style.display = 'flex';
+  list.querySelectorAll('.env-row').forEach(r => r.remove());
+  keys.forEach(k => {
+    const row = document.createElement('div');
+    row.className = 'env-row';
+    row.style.cssText = 'display:flex;gap:6px;margin-bottom:6px;align-items:center';
+    row.innerHTML =
+      '<input type="text" class="env-key" data-orig="' + k.replace(/"/g, '&quot;') + '" value="' + k.replace(/"/g, '&quot;') + '" placeholder="KEY" style="flex:1;padding:6px 10px;background:#0e1e25;border:1px solid rgba(255,255,255,.12);border-radius:5px;color:#fff;font-size:13px;font-family:monospace">' +
+      '<input type="text" class="env-val" value="' + (envVars[k]||'').replace(/"/g, '&quot;') + '" placeholder="value" style="flex:2;padding:6px 10px;background:#0e1e25;border:1px solid rgba(255,255,255,.12);border-radius:5px;color:#fff;font-size:13px;font-family:monospace">' +
+      '<button class="btn btn-secondary btn-sm" onclick="this.parentElement.remove();showEnvSave()" title="Remove">&times;</button>';
+    list.appendChild(row);
+  });
+}
+
+function addEnvRow() {
+  const list = document.getElementById('env-list');
+  const row = document.createElement('div');
+  row.className = 'env-row';
+  row.style.cssText = 'display:flex;gap:6px;margin-bottom:6px;align-items:center';
+  row.innerHTML =
+    '<input type="text" class="env-key" placeholder="KEY" autofocus style="flex:1;padding:6px 10px;background:#0e1e25;border:1px solid rgba(255,255,255,.12);border-radius:5px;color:#fff;font-size:13px;font-family:monospace">' +
+    '<input type="text" class="env-val" placeholder="value" style="flex:2;padding:6px 10px;background:#0e1e25;border:1px solid rgba(255,255,255,.12);border-radius:5px;color:#fff;font-size:13px;font-family:monospace">' +
+    '<button class="btn btn-secondary btn-sm" onclick="this.parentElement.remove();showEnvSave()" title="Remove">&times;</button>';
+  document.getElementById('env-empty').style.display = 'none';
+  document.getElementById('env-save-bar').style.display = 'flex';
+  list.appendChild(row);
+  row.querySelector('.env-key').focus();
+}
+
+function showEnvSave() {
+  const rows = document.querySelectorAll('.env-row');
+  if (rows.length === 0) {
+    document.getElementById('env-empty').style.display = '';
+    document.getElementById('env-save-bar').style.display = 'none';
+  }
+}
+
+function saveEnvVars() {
+  var env = {};
+  document.querySelectorAll('.env-row').forEach(row => {
+    var k = row.querySelector('.env-key').value.trim();
+    var v = row.querySelector('.env-val').value;
+    if (k) env[k] = v;
+  });
+  fetch('/site/{{ site.name }}/env', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(env)
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.error) { toast(d.error, true); return; }
+    envVars = env;
+    toast('Variables saved. Re-deploy to apply.');
+    var s = document.getElementById('env-save-status');
+    s.textContent = 'Saved';
+    setTimeout(() => { s.textContent = ''; }, 2000);
+  })
+  .catch(() => toast('Failed to save', true));
+}
+
+// Render existing env vars on page load
+if (Object.keys(envVars).length > 0) renderEnvVars();
 
 loadLogs();
 </script>

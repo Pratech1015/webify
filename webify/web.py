@@ -61,6 +61,7 @@ def _service_info(name: str) -> dict:
         "dir": info.get("dir"),
         "netlify_functions": info.get("netlify_functions") or [],
         "site_port": info.get("site_port"),
+        "env": info.get("env") or {},
     }
 
 
@@ -240,6 +241,20 @@ def site_restart(name):
     except WebifyError as exc:
         return jsonify({"error": str(exc)}), 500
     return jsonify({"status": "deploying"})
+
+
+@app.route("/site/<name>/env", methods=["POST"])
+def site_env(name):
+    si = state.get_service(name)
+    if not si:
+        return jsonify({"error": "not found"}), 404
+    data = request.get_json(force=True) if request.is_json else {}
+    env = {}
+    for k, v in data.items():
+        if isinstance(k, str) and isinstance(v, (str, int, float, bool)):
+            env[k] = str(v)
+    state.update_service(name, {"env": env})
+    return jsonify({"ok": True, "env": env})
 
 
 @app.route("/site/<name>/delete", methods=["POST"])

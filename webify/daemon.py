@@ -163,13 +163,20 @@ WantedBy=default.target
     _write_unit(path, content)
 
 
-def write_custom_unit(name: str, command: str, workdir: Path = None, port: int = None) -> None:
+def write_custom_unit(name: str, command: str, workdir: Path = None, port: int = None, env: dict = None) -> None:
     """Write a systemd user unit that runs an arbitrary command (dev server, binary, etc.)."""
     desc = f"Webify service {name}"
     if port:
         desc += f" (port {port})"
     workdir_line = f"WorkingDirectory={workdir}" if workdir else ""
-    env_line = f"Environment=PORT={port}" if port else ""
+    env_lines = []
+    if port:
+        env_lines.append(f"Environment=PORT={port}")
+    if env:
+        for k, v in env.items():
+            val = str(v).replace('"', '\\"')
+            env_lines.append(f'Environment="{k}={val}"')
+    env_block = "\n".join(env_lines)
     content = f"""# Managed by Webify — do not edit manually.
 [Unit]
 Description={desc}
@@ -178,7 +185,7 @@ After=network.target
 [Service]
 Type=simple
 {workdir_line}
-{env_line}
+{env_block}
 ExecStart={command}
 Restart=on-failure
 RestartSec=2
