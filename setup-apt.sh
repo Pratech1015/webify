@@ -21,7 +21,8 @@ SOURCES_FILE="/etc/apt/sources.list.d/webify.list"
 info "Adding Webify APT repository..."
 cat > "$SOURCES_FILE" <<SOURCES
 # Webify — self-hosted Netlify alternative
-deb [trusted=yes] ${REPO_URL}/repo stable main
+# Flat repo: fetches exactly one Packages index (no dists/ probing).
+deb [trusted=yes] ${REPO_URL}/repo ./
 SOURCES
 ok "Repository added to ${SOURCES_FILE}"
 

@@ -3,21 +3,21 @@
 # Rebuild the APT Packages index after adding/updating a .deb.
 # Run this after every release: ./repo/rebuild-index.sh
 #
+# Uses a FLAT repository layout so apt fetches exactly one Packages file and
+# doesn't probe the whole dists/<suite>/main/{binary-*,Translation,Components}
+# tree (which caused repeated "Ign:" fetches on raw.githubusercontent.com).
+#
 set -euo pipefail
 cd "$(dirname "$0")"
 
-echo "Rebuilding APT package index..."
+echo "Rebuilding APT package index (flat repo)..."
 
-# Generate Packages (architecture-independent)
-dpkg-scanpackages pool/main /dev/null > dists/stable/main/binary-all/Packages 2>/dev/null
+# Generate Packages for all .deb files in this directory.
+dpkg-scanpackages . /dev/null > Packages 2>/dev/null
+gzip -9c Packages > Packages.gz
 
-# Mirror to amd64 (native arch) so apt finds the package
-mkdir -p dists/stable/main/binary-amd64
-cp dists/stable/main/binary-all/Packages dists/stable/main/binary-amd64/Packages
-
-# Compress both
-gzip -9c dists/stable/main/binary-all/Packages > dists/stable/main/binary-all/Packages.gz
-gzip -9c dists/stable/main/binary-amd64/Packages > dists/stable/main/binary-amd64/Packages.gz
-
-echo "Index updated: $(grep '^Package:' dists/stable/main/binary-all/Packages | wc -l) package(s)"
-echo "Packages size: $(du -h dists/stable/main/binary-all/Packages | cut -f1)"
+echo "Index updated: $(grep '^Package:' Packages | wc -l) package(s)"
+echo "Packages size: $(du -h Packages | cut -f1)"
+echo
+echo "Client sources line (flat repo):"
+echo "  deb [trusted=yes] $PWD ./"

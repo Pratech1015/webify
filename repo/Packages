@@ -4,7 +4,7 @@ Architecture: all
 Maintainer: Webify Contributors <webify@localhost>
 Depends: python3 (>= 3.8), git, python3-flask, python3-waitress, python3-toml, nodejs
 Recommends: nginx, cloudflared
-Filename: pool/main/webify_0.3.0_all.deb
+Filename: ./webify_0.3.0_all.deb
 Size: 25684
 MD5sum: 570094d3a2ca2bb9e97dec58cfb03c22
 SHA1: b5d30bcd9509f4c15053bdd0c890c56922ac0d35
