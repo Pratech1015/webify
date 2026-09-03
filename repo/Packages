@@ -3,10 +3,10 @@ Version: 0.3.1-1
 Architecture: all
 Depends: python3, git
 Filename: ./webify_0.3.1_all.deb
-Size: 72804
-MD5sum: 1f96c772f8625acaaf178163c3e17a67
-SHA1: 54c3a72a726fc98dd60aaabd13d3b21eeec92441
-SHA256: cb4cfc5ae169691d23621db18c679b15d787fdcf4aab60f1c32661b71ec872e6
+Size: 72792
+MD5sum: 3731575abb2247e4053a51d02dcf67d5
+SHA1: 57fbbf2dfe538d02d4446bcb030e6057eaf8f631
+SHA256: c1ddd11dba4ccaa7a54fae0cad0bb35d4b4ff8d26e559db906ce4baab803afa3
 Description: Self-hosted Netlify alternative for Linux
  Webify deploys static sites directly from Git repositories and serves them
  as systemd user services behind Python's built-in HTTP server.
