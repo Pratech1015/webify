@@ -1,0 +1,20 @@
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="strokeGrad" gradientUnits="userSpaceOnUse" x1="120" y1="350" x2="400" y2="130">
+      <stop offset="0%" stop-color="#0EE3B8"/>
+      <stop offset="50%" stop-color="#3E86FF"/>
+      <stop offset="100%" stop-color="#8B3CF5"/>
+    </linearGradient>
+    <filter id="dropShadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="8" stdDeviation="9" flood-color="#4B2AA8" flood-opacity="0.30"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#dropShadow)" stroke="url(#strokeGrad)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 140 188 L 196 330" stroke-width="40"/>
+    <path d="M 196 330 L 256 233" stroke-width="34"/>
+    <path d="M 256 233 L 316 330" stroke-width="30"/>
+    <path d="M 316 330 L 366 190" stroke-width="24"/>
+    <path d="M 380.1 150.4 L 391.8 195.0 L 342.9 177.5 Z" fill="url(#strokeGrad)" stroke="none"/>
+  </g>
+</svg>
