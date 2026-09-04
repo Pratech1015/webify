@@ -97,6 +97,10 @@
             <div style="font-size:11px;color:#556677;margin-top:2px">Injected as process env during build &amp; runtime (like Netlify)</div>
           </div>
           <button class="btn btn-secondary btn-sm" onclick="addEnvRow()">+ Add</button>
+          <label class="btn btn-secondary btn-sm" style="cursor:pointer;margin-left:6px">
+            Upload .env
+            <input type="file" accept=".env,.txt" style="display:none" onchange="uploadEnvFile(this)">
+          </label>
         </div>
         <div id="env-list">
           <div id="env-empty" style="font-size:12px;color:#556677;padding:8px 0">No variables set yet.</div>
@@ -287,6 +291,38 @@ function saveEnvVars() {
     setTimeout(() => { s.textContent = ''; }, 2000);
   })
   .catch(() => toast('Failed to save', true));
+}
+
+function uploadEnvFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const text = e.target.result;
+    const parsed = {};
+    text.split('\n').forEach(line => {
+      line = line.trim();
+      if (!line || line.startsWith('#')) return;
+      const idx = line.indexOf('=');
+      if (idx === -1) return;
+      const key = line.slice(0, idx).trim();
+      let val = line.slice(idx + 1).trim();
+      if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+        val = val.slice(1, -1);
+      }
+      if (key) parsed[key] = val;
+    });
+    if (Object.keys(parsed).length === 0) {
+      toast('No variables found in file', true);
+      return;
+    }
+    Object.assign(envVars, parsed);
+    renderEnvVars();
+    document.getElementById('env-save-bar').style.display = 'flex';
+    toast('Imported ' + Object.keys(parsed).length + ' variables. Save to apply.');
+  };
+  reader.readAsText(file);
+  input.value = '';
 }
 
 // Render existing env vars on page load

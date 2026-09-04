@@ -17,10 +17,10 @@ Architecture: all
 Maintainer: Webify <noreply@webify.dev>
 Depends: webify, python3-flask, python3-waitress
 Filename: ./webify-web_0.3.4_all.deb
-Size: 9376
-MD5sum: 805887f97cfe319b27ca55e207be76df
-SHA1: 025ab6d1cecd17fd0cea0df8d3ca3bf062214d6b
-SHA256: 80c578b9207c5f71b07f95e8dd7fc288c2d5b8653a79abb1df9c52018aca1612
+Size: 9748
+MD5sum: 1b31c7b192363d84d2cbace45c10e9f3
+SHA1: 50b5fece5bc8fddb3b17a9820549ea1cdf704c4b
+SHA256: 302a88519e4b171ce629a6141fe95ce359e7d3dea0ac7b7b7a43e1d9e4f91e9b
 Description: Webify Web Dashboard
  Flask-based web UI for managing deployed sites.
  Installs alongside the webify core package.
