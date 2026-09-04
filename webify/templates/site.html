@@ -96,9 +96,9 @@
             <div style="font-size:13px;font-weight:600;color:#e0e8f0">Environment variables</div>
             <div style="font-size:11px;color:#556677;margin-top:2px">Injected as process env during build &amp; runtime (like Netlify)</div>
           </div>
-          <div style="display:flex;gap:6px">
-            <button class="btn btn-secondary btn-sm" onclick="addEnvRow()">+ Add</button>
-            <label class="btn btn-secondary btn-sm" style="cursor:pointer">
+          <div style="display:flex;gap:4px;align-items:center">
+            <button class="btn btn-secondary btn-sm" onclick="addEnvRow()" style="margin:0">+ Add</button>
+            <label class="btn btn-secondary btn-sm" style="cursor:pointer;margin:0">
               Upload .env
               <input type="file" accept=".env,.txt" style="display:none" onchange="uploadEnvFile(this)">
             </label>
