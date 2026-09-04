@@ -3,11 +3,16 @@
 {% block content %}
 <div class="topbar">
   <h1>{{ site.name }}</h1>
-  <div class="actions">
+  <div class="actions" style="display:flex;gap:6px;flex-wrap:wrap">
     <button class="btn btn-primary" onclick="api('/site/{{ site.name }}/deploy')">Deploy</button>
+    {% if 'running' not in site.status %}
+      <button class="btn btn-secondary" onclick="api('/site/{{ site.name }}/start')">Start</button>
+    {% endif %}
     {% if 'running' in site.status %}
       <button class="btn btn-secondary" onclick="api('/site/{{ site.name }}/stop')">Stop</button>
+      <button class="btn btn-secondary" onclick="api('/site/{{ site.name }}/restart')">Restart</button>
     {% endif %}
+    <button class="btn btn-danger btn-sm" onclick="killSite()">Kill</button>
   </div>
 </div>
 
@@ -192,6 +197,17 @@ function deleteSite() {
       window.location.href = '/';
     })
     .catch(() => toast('Delete failed', true));
+}
+
+function killSite() {
+  if (!confirm('Force kill {{ site.name }}? This sends SIGKILL to the process.')) return;
+  fetch('/site/{{ site.name }}/kill', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'}
+  })
+    .then(r => r.json())
+    .then(d => { if(d.error) toast(d.error, true); else { toast('Process killed'); setTimeout(() => location.reload(), 500); } })
+    .catch(() => toast('Kill failed', true));
 }
 
 function renameSite() {

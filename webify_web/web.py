@@ -226,6 +226,18 @@ def site_restart(name):
     return jsonify({"status": "deploying"})
 
 
+@app.route("/site/<name>/kill", methods=["POST"])
+def site_kill(name):
+    info = state.get_service(name)
+    if not info:
+        return jsonify({"error": "not found"}), 404
+    daemon.stop_unit(daemon.http_unit_name(name), disable=True)
+    daemon.stop_unit(daemon.tunnel_unit_name(name), disable=True)
+    daemon.stop_functions_unit(name)
+    daemon.stop_watcher_unit(name)
+    return jsonify({"status": "killed"})
+
+
 @app.route("/site/<name>/env", methods=["POST"])
 def site_env(name):
     si = state.get_service(name)
