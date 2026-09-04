@@ -2,10 +2,10 @@ Origin: Webify
 Label: Webify
 Suite: stable
 Codename: stable
-Date: Fri, 04 Sep 2026 08:43:27 +0000
+Date: Fri, 04 Sep 2026 08:47:51 +0000
 Architectures: all amd64
 Components: main
 Description: Webify apt repository
 SHA256:
- fffbd059c601307ca2a8b9d734cd2b29e246e5331f9638705111acf6480bcaca 401 Packages
- c6ea282a626c9c2fe1d22418498f9c6aabeff8c0dabb8bc35ca02c8b71587fb7 326 Packages.gz
+ 79e005f78e626bf093c8b36cabf5a5947f0f99c7499166f11be29149d76c80dc 401 Packages
+ 1064f017c40ac312359950ced12657c8995add642af50cf84f51f23cba5978b6 324 Packages.gz
