@@ -155,6 +155,9 @@ class BaseService:
         return base
 
     def url(self) -> str:
+        return self._local_url()
+
+    def _local_url(self) -> str:
         return f"http://localhost:{_port(self)}"
 
     # ---- helpers ----
