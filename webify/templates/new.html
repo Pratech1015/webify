@@ -40,7 +40,7 @@
         <div class="hint">Leave empty to auto-assign starting at 7070.</div>
       </div>
       <div style="display:flex;gap:10px;margin-top:20px">
-        <button type="submit" class="btn btn-primary">Create site</button>
+        <button type="submit" class="btn btn-primary" id="create-btn">Create site</button>
         <a href="/" class="btn btn-secondary">Cancel</a>
       </div>
     </form>
@@ -51,5 +51,17 @@ function toggleDomain() {
   var mode = document.getElementById('mode-select').value;
   document.getElementById('domain-group').style.display = mode === 'cloudflared' ? '' : 'none';
 }
+
+document.querySelector('form').addEventListener('submit', function(e) {
+  e.preventDefault();
+  var btn = document.getElementById('create-btn');
+  btn.textContent = 'Creating…';
+  btn.disabled = true;
+  var formData = new FormData(this);
+  var name = formData.get('name');
+  fetch('/new', { method: 'POST', body: formData })
+    .then(r => { window.location.href = '/site/' + name; })
+    .catch(() => { btn.textContent = 'Create site'; btn.disabled = false; });
+});
 </script>
 {% endblock %}
