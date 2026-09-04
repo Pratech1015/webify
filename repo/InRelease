@@ -5,27 +5,27 @@ Origin: Webify
 Label: Webify
 Suite: stable
 Codename: stable
-Date: Thu, 03 Sep 2026 15:44:09 +0000
+Date: Fri, 04 Sep 2026 08:20:51 +0000
 Architectures: all amd64
 Components: main
 Description: Webify apt repository
 SHA256:
- b729ef09438753acaf2fe72bf4d66342b6f743ad672afd4c1a0380c34b8e51a1 572 Packages
- 7a9eaaf14d1f3ce6d11e52638871db1db3159e44371458b21208eb2d1fc41879 429 Packages.gz
+ 69306d2e1f23812bef54f38bc422d5da1d84c8d4418c9820bdc03e8e7005eab2 401 Packages
+ de27ea746870a7f286462127571080f1cabd99a7e7e2d223d7020a88a370d76e 325 Packages.gz
 
 -----BEGIN PGP SIGNATURE-----
 
-iQIzBAEBCgAdFiEEykKQZBUwmPoHGsffDR6MeWg8AcMFAmqZlckACgkQDR6MeWg8
-AcMLrw//V7zmJH5dw+PAC27AkEqrtRuLHoCZY/3wUA3w/ZA24M6s/3cLa5SY6dQB
-PGf3eJ1vVs9jrkDRq5vlFuxI/2WG5PhEhZq7tdwK6H/Z3BpLS92wPOkbRx9wtiEt
-fxkf3BR9hhMgQxksneMoe0m1y3nD2iz8Fb+0Zt3zr4QVNvXfafwtKkmourDEzZdt
-BVjeiuUdXi6ML5YrkdQWklew/Z6CVIzlnrK4MQevjXECFPst8h2YB9tzYXTjwVUV
-+l1LW21/k7C7y7fEllVDVR+ii49E4/+Iq8OwnCH0jaEKK456x0HakfXjtrVMUxoq
-thDMaJhcoem4NNDyVkHctQb1zrfP9rnrWjJScmGbiA6xKM7lXKX4Egkx3sjI7dDX
-XYI5xgEGpV66E4MKNeCbCNFYcQNlz7Ch8rsJKze3/x0KuJnDqtDib4PrC53SJmio
-V/azqPkzhdGLDmmF1Vx+Ent9PCLF/mpG1qguXJFg2hRvGDcpUkGb9kuNyVVv5tMz
-R/MuY2kQMdHN+695svniRKPSiEK7h6RWYPVfwaNG/nwgkaafGNA3W3VxRzUAqJwg
-alJaD7zmhhrwkJoxNUb1sQqupSyYub7DreDHSiRFzscowud+mhx4Y4HoovQCeU9S
-vKcOitrLZOKfa0rzoV5nATFJsmQA+iDmcq+/ysyg+ymQwSI+WT8=
-=jbYD
+iQIzBAEBCgAdFiEEykKQZBUwmPoHGsffDR6MeWg8AcMFAmqaf2MACgkQDR6MeWg8
+AcNa4g/+IWLmuVQsnOOdAT5NMwLcjFpuAz/Yk772wg6IuL6B7v+0UQUoVUTFOJ/Z
+zWH7NtevrHrbIV/DRcGSa9A3wVqID4WaTrJo5HeU8C9aWP3b69MWqCEjE+jALutZ
+Cr/2tixA9eQiqe3+Bp+OAd1DyItsIkPJdboyZXed+y71hYJDEBx4ml8KX1lXHJqY
+tyDKLJRNIK/7uJ8p3S/OrN2Ji6wkI5Wx3d4d0XQLS1piPM15H54+qmnkf8QVF8KX
+iNzwm1QixjUFYQKtOavi/q5PFIU8A8tXE1o8EZU8XySvs+ixZ+lnkNWwNylIkzk6
+AZ9RqGyImBydlcnHhMSAIxCmMBFrexdOed824j/7Np9eA5HIVd+irwjOn6ZzX1Jx
+WiahVSF4ShY1eWCSl909/eTewTFpqiwR/0Ho/ytFMOY4tkDf9IrLzixksT/F/xpA
+elo0rI3SvsmP10JlO2RDfTkai0xUT0LLtk+VaErrsf3YO+Mknexj/+jiqR/Rber8
+oNrLb1ZDHxQ3SHsjdPCeue0XY8fqiGDXh/ZNSpAjEa7tXyZ3Ui61fllnZBgpGHNb
+imjXbJIodxX1f3jYOka4Ohdqo8myinbp4tG6PWowg/pa9gV7M3H5xadH3w0C0U8t
+4R7/vNahmiH1WwZ1nH1LgHbjXjndcU/dCPoYwlciTIIm2AwxUw4=
+=lC2N
 -----END PGP SIGNATURE-----

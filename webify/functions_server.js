@@ -125,6 +125,21 @@ const context = {
   getRemainingTimeInMillis: () => 10000,
 };
 
+/** Build a Request-like object for Netlify Edge Function handlers. */
+function buildRequestLike(method, rawPath, query, headers, bodyBuf) {
+  const host = headers.host || "127.0.0.1";
+  const fullUrl = `http://${host}${rawPath}${query ? "?" + query : ""}`;
+  const bodyStr = bodyBuf ? bodyBuf.toString() : undefined;
+  return {
+    url: fullUrl,
+    method,
+    headers,
+    body: bodyStr,
+    json: async () => JSON.parse(bodyStr || "{}"),
+    text: async () => bodyStr || "",
+  };
+}
+
 const server = http.createServer((req, res) => {
   handle(req, res).catch((err) => {
     console.error("[functions] unhandled error:", err);
@@ -154,7 +169,29 @@ async function handle(req, res) {
     try {
       const handler = await loadHandler(file);
       const event = buildEvent(method, rawPath, query, req.headers, bodyBuf);
-      const result = await handler(event, context);
+      const requestLike = buildRequestLike(method, rawPath, query, req.headers, bodyBuf);
+
+      let result;
+      try {
+        result = await handler(event, context);
+      } catch (lambdaErr) {
+        try {
+          const response = await handler(requestLike);
+          if (response && typeof response.status === "number" && typeof response.text === "function") {
+            const body = await response.text();
+            result = {
+              statusCode: response.status,
+              headers: Object.fromEntries(response.headers.entries()),
+              body,
+            };
+          } else {
+            result = response;
+          }
+        } catch (edgeErr) {
+          throw lambdaErr;
+        }
+      }
+
       return sendFunctionResult(res, result);
     } catch (err) {
       console.error(`[functions] ${name} threw:`, err);
