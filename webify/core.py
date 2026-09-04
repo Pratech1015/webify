@@ -146,20 +146,30 @@ def build_repo(repo_dir: Path, port: int = 7070, user_env: dict = None) -> dict:
 
     if "command" in build:
         toml_env = build.get("environment", {})
+        base = build.get("base", "")
+        workdir = repo_dir / base if base else repo_dir
+
+        if not workdir.is_dir():
+            raise WebifyError(f"Build base directory '{base}' does not exist in repo.")
+
         # Install dependencies first if package.json exists
-        if (repo_dir / "package.json").exists():
-            _npm_install(repo_dir)
+        if (workdir / "package.json").exists():
+            _npm_install(workdir)
         print(f"  Running netlify build command: {build['command']}", flush=True)
         import subprocess, os
         merged = {**os.environ, **(toml_env or {}), **(user_env or {}), "PORT": str(port)}
-        proc = subprocess.run(build["command"], shell=True, cwd=repo_dir, env=merged, check=False)
+        proc = subprocess.run(build["command"], shell=True, cwd=workdir, env=merged, check=False)
         if proc.returncode != 0:
             raise WebifyError(f"Build command '{build['command']}' failed.")
 
-        # If it's a node project, look for start
-        if (repo_dir / "package.json").exists():
-            scripts = _npm_scripts(repo_dir)
-            if "start" in scripts:
+        # Static site — publish dir is relative to base
+        publish = build.get("publish", ".")
+        served = workdir / publish if publish != "." else workdir
+
+        # If it's a node project with a start script and no publish dir, run as server
+        if (workdir / "package.json").exists():
+            scripts = _npm_scripts(workdir)
+            if "start" in scripts and publish == ".":
                 return {
                     "mode": "server",
                     "command": "npm run start",
@@ -168,10 +178,9 @@ def build_repo(repo_dir: Path, port: int = 7070, user_env: dict = None) -> dict:
                     **functions_meta,
                 }
 
-        # Static site
         return {
             "mode": "static",
-            "served": repo_dir / build.get("publish", "."),
+            "served": served,
             "port": port,
             **functions_meta,
         }

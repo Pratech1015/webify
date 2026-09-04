@@ -3,10 +3,10 @@ Version: 0.3.4
 Architecture: all
 Maintainer: Webify <noreply@webify.dev>
 Filename: ./webify_0.3.4_all.deb
-Size: 20528
-MD5sum: 2dbe5f7912efd88ed9941eb78f930d2d
-SHA1: 42b46279f10ec2c643abbf2d8622b4a25298ca1f
-SHA256: 18277591b9d62962dde18c313878077aff8b856f6b08e4df09a1969444425109
+Size: 20640
+MD5sum: eaa0c6a189ab71dd27c9a52e3180a82d
+SHA1: 6a85b45af4f19a01e331d0c2d0b88bffaf8259fb
+SHA256: 575e9d7bb410980335a27b8e4cd7d6b30b1d4776a7ad423e8028c47a5d6bd907
 Description: Self-hosted Netlify alternative
  Deploy git repos as systemd services with a web dashboard.
  Core CLI and deploy engine (no web dashboard).
