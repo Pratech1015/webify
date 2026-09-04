@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Webify{% endblock %}</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0e1e25;color:#c5d3de;min-height:100vh}
+a{color:#00d4aa;text-decoration:none}a:hover{text-decoration:underline}
+/* sidebar */
+.sidebar{position:fixed;top:0;left:0;width:240px;height:100vh;background:#122631;border-right:1px solid rgba(255,255,255,.07);display:flex;flex-direction:column;z-index:10}
+.sidebar .logo{padding:20px 24px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,.07)}
+.sidebar .logo .mark{width:28px;height:28px}
+.sidebar .logo span{font-size:17px;font-weight:600;color:#fff;letter-spacing:.3px}
+.sidebar nav{flex:1;padding:12px 0}
+.sidebar nav a{display:flex;align-items:center;gap:10px;padding:10px 24px;color:#8899aa;font-size:14px;transition:all .15s}
+.sidebar nav a:hover{background:rgba(255,255,255,.04);color:#fff;text-decoration:none}
+.sidebar nav a.active{color:#00d4aa;background:rgba(0,212,170,.06)}
+.sidebar nav a svg{width:18px;height:18px;flex-shrink:0}
+.sidebar .bottom{padding:16px 24px;border-top:1px solid rgba(255,255,255,.07);font-size:12px;color:#556677}
+/* main */
+.main{margin-left:240px;padding:28px 36px;min-height:100vh}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px}
+.topbar h1{font-size:20px;font-weight:600;color:#fff}
+.topbar .actions{display:flex;gap:10px}
+/* buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:6px;font-size:13px;font-weight:500;border:none;cursor:pointer;transition:all .15s}
+.btn-primary{background:#00d4aa;color:#0e1e25}.btn-primary:hover{background:#00bfa0;text-decoration:none}
+.btn-secondary{background:rgba(255,255,255,.06);color:#c5d3de;border:1px solid rgba(255,255,255,.1)}.btn-secondary:hover{background:rgba(255,255,255,.1);text-decoration:none}
+.btn-danger{background:rgba(220,53,69,.12);color:#ff6b7a;border:1px solid rgba(220,53,69,.2)}.btn-danger:hover{background:rgba(220,53,69,.2);text-decoration:none}
+.btn-sm{padding:5px 10px;font-size:12px}
+/* cards */
+.card{background:#132c38;border:1px solid rgba(255,255,255,.07);border-radius:8px;overflow:hidden}
+.card-header{padding:16px 20px;border-bottom:1px solid rgba(255,255,255,.05);display:flex;align-items:center;justify-content:space-between}
+.card-header h3{font-size:14px;font-weight:600;color:#fff}
+.card-body{padding:20px}
+/* table */
+.table{width:100%;border-collapse:collapse}
+.table th{text-align:left;padding:10px 16px;font-size:12px;font-weight:500;color:#556677;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid rgba(255,255,255,.07)}
+.table td{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.04);font-size:14px}
+.table tr:last-child td{border-bottom:none}
+.table tr:hover td{background:rgba(255,255,255,.02)}
+/* status */
+.status{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:500;padding:3px 10px;border-radius:12px}
+.status-running{background:rgba(0,212,170,.1);color:#00d4aa}
+.status-stopped{background:rgba(255,107,122,.1);color:#ff6b7a}
+.status-dot{width:6px;height:6px;border-radius:50%}
+.status-running .status-dot{background:#00d4aa}
+.status-stopped .status-dot{background:#ff6b7a}
+/* form */
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:13px;font-weight:500;color:#8899aa;margin-bottom:6px}
+.form-group input,.form-group select{width:100%;padding:10px 14px;background:#0e1e25;border:1px solid rgba(255,255,255,.12);border-radius:6px;color:#fff;font-size:14px;outline:none;transition:border .15s}
+.form-group input:focus,.form-group select:focus{border-color:#00d4aa}
+.form-group .hint{font-size:12px;color:#556677;margin-top:4px}
+/* logs */
+.logbox{background:#0a151d;border:1px solid rgba(255,255,255,.06);border-radius:6px;padding:16px;font-family:'JetBrains Mono',Fira Code,monospace;font-size:12px;line-height:1.7;color:#8899aa;max-height:500px;overflow-y:auto;white-space:pre-wrap;word-break:break-all}
+/* empty */
+.empty{text-align:center;padding:60px 20px;color:#556677}
+.empty svg{width:48px;height:48px;margin-bottom:16px;opacity:.3}
+.empty p{font-size:15px;margin-bottom:20px}
+/* tabs */
+.tabs{display:flex;gap:0;border-bottom:1px solid rgba(255,255,255,.07);margin-bottom:20px}
+.tabs a{padding:10px 18px;font-size:13px;color:#556677;border-bottom:2px solid transparent;transition:all .15s}
+.tabs a:hover{color:#c5d3de;text-decoration:none}
+.tabs a.active{color:#00d4aa;border-bottom-color:#00d4aa}
+/* toast */
+.toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:8px;font-size:13px;color:#fff;z-index:100;animation:fadeIn .2s}
+.toast-ok{background:#00d4aa;color:#0e1e25}
+.toast-err{background:#dc3545}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+/* modal */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:50;align-items:center;justify-content:center}
+.modal-bg.show{display:flex}
+.modal{background:#122631;border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:28px;width:420px;max-width:90vw}
+.modal h3{font-size:16px;color:#fff;margin-bottom:16px}
+.modal .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
+</style>
+</head>
+<body>
+<aside class="sidebar">
+  <div class="logo"><img src="/static/logo.svg" alt="Webify" class="mark"><span>Webify</span></div>
+  <nav>
+    <a href="/" class="{% if request.endpoint == 'index' %}active{% endif %}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Sites
+    </a>
+    <a href="/new" class="{% if request.endpoint == 'new_site' %}active{% endif %}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Add site
+    </a>
+  </nav>
+  <div class="bottom">Webify v{{ version }}</div>
+</aside>
+<div class="main">
+{% block content %}{% endblock %}
+</div>
+{% block scripts %}{% endblock %}
+</body>
+</html>

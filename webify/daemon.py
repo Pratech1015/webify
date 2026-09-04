@@ -121,7 +121,7 @@ After=network.target
 [Service]
 Type=simple
 Environment=WEBIFY_WEB_PORT={port}
-ExecStart={python} -m webify.web_service {port}
+ExecStart={python} -m webify_web.web_service {port}
 Restart=on-failure
 RestartSec=3
 

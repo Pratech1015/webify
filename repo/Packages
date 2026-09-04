@@ -3,10 +3,25 @@ Version: 0.3.4
 Architecture: all
 Maintainer: Webify <noreply@webify.dev>
 Filename: ./webify_0.3.4_all.deb
-Size: 28096
-MD5sum: 610fc6254a9e15fe3b7ebad9109e14aa
-SHA1: 922f23cd216fd2800f396f66e0e56979ff2472f2
-SHA256: 6a63cab4dbc2b43e21a1568f9751b9212cab4cddc4e39fd0c1474d9fcd6f38d9
+Size: 20500
+MD5sum: 45602a0746018461aa8eeee143472bfa
+SHA1: e3d9b785ea47ca2c6606241acdc6dc20875551c2
+SHA256: 61ac1fc14e06fd834915e58af9452326fdacbfd055a3600290abd7df3af21917
 Description: Self-hosted Netlify alternative
  Deploy git repos as systemd services with a web dashboard.
+ Core CLI and deploy engine (no web dashboard).
+
+Package: webify-web
+Version: 0.3.4
+Architecture: all
+Maintainer: Webify <noreply@webify.dev>
+Depends: webify, python3-flask, python3-waitress
+Filename: ./webify-web_0.3.4_all.deb
+Size: 9376
+MD5sum: 805887f97cfe319b27ca55e207be76df
+SHA1: 025ab6d1cecd17fd0cea0df8d3ca3bf062214d6b
+SHA256: 80c578b9207c5f71b07f95e8dd7fc288c2d5b8653a79abb1df9c52018aca1612
+Description: Webify Web Dashboard
+ Flask-based web UI for managing deployed sites.
+ Installs alongside the webify core package.
 

@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Sites — Webify{% endblock %}
+{% block content %}
+<div class="topbar">
+  <h1>Sites</h1>
+  <div class="actions">
+    <a href="/new" class="btn btn-primary">Add site</a>
+  </div>
+</div>
+{% if sites %}
+<div class="card">
+<table class="table">
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Domain / URL</th>
+      <th>Deploy status</th>
+      <th>Mode</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for s in sites %}
+    <tr>
+      <td><a href="/site/{{ s.name }}" style="font-weight:500;color:#fff">{{ s.name }}</a></td>
+      <td style="font-family:monospace;font-size:13px">{{ s.url or '—' }}</td>
+      <td>
+        {% if s.deploying %}
+          <span class="status status-running"><span class="status-dot"></span>Deploying…</span>
+        {% elif 'running' in s.status %}
+          <span class="status status-running"><span class="status-dot"></span>Published</span>
+        {% elif s.deploy == 'failed' %}
+          <span class="status status-stopped"><span class="status-dot"></span>Failed</span>
+        {% else %}
+          <span class="status status-stopped"><span class="status-dot"></span>Not deployed</span>
+        {% endif %}
+      </td>
+      <td style="color:#556677">{{ s.mode }}</td>
+      <td>
+        <button class="btn btn-secondary btn-sm" onclick="api('/site/{{ s.name }}/deploy')">Deploy</button>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<div class="empty">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+  <p>No sites yet</p>
+  <a href="/new" class="btn btn-primary">Add your first site</a>
+</div>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script>
+function api(url, method='POST') {
+  fetch(url, {method, headers:{'Content-Type':'application/json'}})
+    .then(r => r.json())
+    .then(d => { if(d.error) toast(d.error, true); else location.reload(); })
+    .catch(e => toast('Request failed', true));
+}
+function toast(msg, err) {
+  const t = document.createElement('div');
+  t.className = 'toast ' + (err ? 'toast-err' : 'toast-ok');
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+</script>
+{% endblock %}

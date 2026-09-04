@@ -443,10 +443,10 @@ def cmd_web(args):
     if args.serve:
         ensure_dirs()
         try:
-            from .web import run_web
+            from webify_web.web import run_web
         except ImportError:
             _e("Flask/waitress is required for the web dashboard.")
-            _info("Install it with: pip install webify[web]")
+            _info("Install it with: sudo apt install webify-web")
             sys.exit(1)
         run_web(port=args.port)
         return
