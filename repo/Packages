@@ -12,16 +12,15 @@ Description: Self-hosted Netlify alternative
  Core CLI and deploy engine (no web dashboard).
 
 Package: webify-web
-Version: 0.3.4
+Version: 0.3.5
 Architecture: all
 Maintainer: Webify <noreply@webify.dev>
 Depends: webify, python3-flask, python3-waitress
-Filename: ./webify-web_0.3.4_all.deb
-Size: 10156
-MD5sum: 64b43af14575abf45fd295abd75228ff
-SHA1: 95bc3f339e3f6090d64ac618b9489cb402bff867
-SHA256: f552586fa44d7e45f6347788853ea063a52ae2a933aca7983d0bda29c3a76a32
+Filename: ./webify-web_0.3.5_all.deb
+Size: 10108
+MD5sum: cf6788875313f030c4d4ba76cc1a7cba
+SHA1: 093366a7c14503d034fc4e3495fa6fe00c9503a2
+SHA256: cae5c2e297402aec37c12b3d7b719fae70706ed5051f4332058798715da20179
 Description: Webify Web Dashboard
  Flask-based web UI for managing deployed sites.
- Installs alongside the webify core package.
 
